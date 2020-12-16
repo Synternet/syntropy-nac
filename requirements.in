@@ -1,0 +1,5 @@
+# NOTE: This will be uncommented once syntropy_sdk is deployed.
+# syntropy_sdk
+click
+pyyaml
+dataclasses
