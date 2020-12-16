@@ -4,7 +4,9 @@ from syntropynac import transform
 from tests.utils import EqualSets, update_all_tags
 
 
-def testGetEnabledConnectionSubnets1(connection_services, agent_connection_subnets_1):
+def test_get_enabled_connection_subnets__1(
+    connection_services, agent_connection_subnets_1
+):
     connection = {
         "agent_connection_services": {
             **connection_services,
@@ -14,7 +16,9 @@ def testGetEnabledConnectionSubnets1(connection_services, agent_connection_subne
     assert transform.get_enabled_connection_subnets(connection) == {21, 23, 24, 25}
 
 
-def testGetEnabledConnectionSubnets2(connection_services, agent_connection_subnets_2):
+def test_get_enabled_connection_subnets__2(
+    connection_services, agent_connection_subnets_2
+):
     connection = {
         "agent_connection_services": {
             **connection_services,
@@ -24,7 +28,7 @@ def testGetEnabledConnectionSubnets2(connection_services, agent_connection_subne
     assert transform.get_enabled_connection_subnets(connection) == {23, 24}
 
 
-def testTransformConnectionServices(connection_services, agent_connection_subnets_1):
+def test_transform_connection_services(connection_services, agent_connection_subnets_1):
     connection = {
         "agent_connection_services": {
             **connection_services,
@@ -37,7 +41,7 @@ def testTransformConnectionServices(connection_services, agent_connection_subnet
     )
 
 
-def testTransformNetwork(index_networks):
+def test_transform_network(index_networks):
     assert transform.transform_network(index_networks["data"][0]) == {
         "name": "skip",
         "id": 321,
@@ -47,7 +51,7 @@ def testTransformNetwork(index_networks):
     }
 
 
-def testTransformNetworkTopologyMesh(index_networks):
+def test_transform_network__mesh_topology(index_networks):
     assert transform.transform_network(index_networks["data"][1]) == {
         "name": "test",
         "id": 123,
@@ -57,7 +61,7 @@ def testTransformNetworkTopologyMesh(index_networks):
     }
 
 
-def testTransformNetworkTypeMesh(index_networks):
+def test_transform_network__mesh_type(index_networks):
     assert transform.transform_network(index_networks["data"][2]) == {
         "name": "test",
         "id": 456,
@@ -67,7 +71,7 @@ def testTransformNetworkTypeMesh(index_networks):
     }
 
 
-def testTransformConnectionsP2P(all_agents, p2p_connections):
+def test_transform_connections__p2p(all_agents, p2p_connections):
     assert transform.transform_connections(all_agents, p2p_connections, "P2P") == {
         "de-hetzner-db01": {
             "type": "endpoint",
@@ -98,7 +102,7 @@ def testTransformConnectionsP2P(all_agents, p2p_connections):
     }
 
 
-def testTransformConnectionsP2M(all_agents, p2m_connections):
+def test_transform_connections__p2m(all_agents, p2m_connections):
     assert transform.transform_connections(all_agents, p2m_connections, "P2M") == {
         "auto gen 1": {
             "type": "endpoint",
@@ -129,7 +133,7 @@ def testTransformConnectionsP2M(all_agents, p2m_connections):
     }
 
 
-def testTransformConnectionsP2MReversed(all_agents, p2m_connections):
+def test_transform_connections__p2m_reversed(all_agents, p2m_connections):
     connections = [
         {
             **i,
@@ -168,7 +172,7 @@ def testTransformConnectionsP2MReversed(all_agents, p2m_connections):
     }
 
 
-def testTransformConnectionsP2MTagged(all_agents, p2m_connections):
+def test_transform_connections__p2m_tagged(all_agents, p2m_connections):
     connections = [
         {
             **i,
@@ -199,7 +203,7 @@ def testTransformConnectionsP2MTagged(all_agents, p2m_connections):
     }
 
 
-def testTransformConnectionsP2MTaggedMultiple(all_agents, p2m_connections):
+def test_transform_connections__p2m_tagged_multiple(all_agents, p2m_connections):
     connections = [
         {
             **i,
@@ -236,7 +240,7 @@ def testTransformConnectionsP2MTaggedMultiple(all_agents, p2m_connections):
     }
 
 
-def testTransformConnectionsMesh(all_agents, mesh_connections):
+def test_transform_connections__mesh(all_agents, mesh_connections):
     assert transform.transform_connections(all_agents, mesh_connections, "MESH") == {
         "auto gen 10": {
             "type": "endpoint",
@@ -265,7 +269,7 @@ def testTransformConnectionsMesh(all_agents, mesh_connections):
     }
 
 
-def testTransformConnectionsMeshTaggedMultiple(all_agents, mesh_connections):
+def test_transform_connections__mesh_tagged_multiple(all_agents, mesh_connections):
     connections = [
         {
             **i,
@@ -301,7 +305,7 @@ def testTransformConnectionsMeshTaggedMultiple(all_agents, mesh_connections):
     }
 
 
-def testGroupAgentsByTags():
+def test_group_agents_by_tags():
     agents = {
         1: {
             "agent_id": 1,

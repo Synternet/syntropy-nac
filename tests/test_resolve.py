@@ -20,7 +20,7 @@ def api(index_agents_stub, connection_services_stub):
     return api
 
 
-def testResolvePresentAbsent(config_connections):
+def test_resolve_present_absent(config_connections):
     agents = {f"agent {i}": i for i in range(5)}
     config_connections = list(config_connections.items())
     present = [
@@ -41,7 +41,7 @@ def testResolvePresentAbsent(config_connections):
     )
 
 
-def testResolvePresentAbsentNoServices():
+def test_resolve_present_absent__no_services():
     agents = {f"agent {i}": i for i in range(5)}
     present = [
         (
@@ -57,7 +57,7 @@ def testResolvePresentAbsentNoServices():
     )
 
 
-def testResolvePresentAbsentStrServices():
+def test_resolve_present_absent__str_services():
     agents = {f"agent {i}": i for i in range(5)}
     present = [
         (
@@ -73,7 +73,7 @@ def testResolvePresentAbsentStrServices():
     )
 
 
-def testResolvePresentAbsentBadServices():
+def test_resolve_present_absent__bad_services():
     agents = {f"agent {i}": i for i in range(5)}
     present = [
         (
@@ -86,7 +86,7 @@ def testResolvePresentAbsentBadServices():
         resolve.resolve_present_absent(agents, present, absent)
 
 
-def testExpandAgentsTagsPresent(api):
+def test_expand_agents_tags__present(api):
     config = {
         "test": {
             "type": "tag",
@@ -115,7 +115,7 @@ def testExpandAgentsTagsPresent(api):
     }
 
 
-def testExpandAgentsTagsPresentServices(api):
+def test_expand_agents_tags__present_services(api):
     config = {
         "test": {
             "type": "tag",
@@ -145,7 +145,7 @@ def testExpandAgentsTagsPresentServices(api):
     }
 
 
-def testExpandAgentsTagsExceptOne(api):
+def test_expand_agents_tags__except_one(api):
     config = {
         "test": {
             "type": "tag",
@@ -179,7 +179,7 @@ def testExpandAgentsTagsExceptOne(api):
     }
 
 
-def testExpandAgentsTagsExceptTag(api):
+def test_expand_agents_tags__except_tag(api):
     config = {
         "test": {
             "type": "tag",
@@ -250,7 +250,7 @@ def testExpandAgentsTagsExceptTag(api):
     }
 
 
-def testResolveP2PConnections(api):
+def test_resolve_p2p_connections(api):
     connections = {
         "agent1": {
             "connect_to": {
@@ -273,7 +273,7 @@ def testResolveP2PConnections(api):
     )
 
 
-def testResolveP2MConnections(api):
+def test_resolve_p2m_connections(api):
     connections = {
         "agent1": {
             "connect_to": {
@@ -302,7 +302,7 @@ def testResolveP2MConnections(api):
     )
 
 
-def testResolveP2MConnectionsTags(api):
+def test_resolve_p2m_connections__tags(api):
     connections = {
         "agent1": {
             "connect_to": {
@@ -327,7 +327,7 @@ def testResolveP2MConnectionsTags(api):
     )
 
 
-def testResolveP2MConnectionsTagsNotFound(api):
+def test_resolve_p2m_connections__tags_not_found(api):
     connections = {
         "agent1": {
             "connect_to": {
@@ -351,7 +351,7 @@ def testResolveP2MConnectionsTagsNotFound(api):
         the_mock.assert_called_once()
 
 
-def testResolveMeshConnections(api):
+def test_resolve_mesh_connections(api):
     connections = {
         "agent1": {"services": "a"},
         "agent2": {"services": "b"},
@@ -369,7 +369,7 @@ def testResolveMeshConnections(api):
     )
 
 
-def testResolveMeshConnectionsTag(api):
+def test_resolve_mesh_connections__tag(api):
     connections = {
         "tag1": {"type": "tag"},
         "iot": {"type": "tag"},
@@ -397,7 +397,7 @@ def testResolveMeshConnectionsTag(api):
     )
 
 
-def testResolveMeshConnectionsTagsNotFound(api):
+def test_resolve_mesh_connections__tags_not_found(api):
     connections = {
         "tag1": {"type": "tag"},
         "iot": {"type": "tag"},

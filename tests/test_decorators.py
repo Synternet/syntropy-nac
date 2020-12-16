@@ -1,7 +1,7 @@
 from unittest import mock
 
 import pytest
-from syntropy_sdk.rest import ApiException
+from syntropy_sdk.exceptions import ApiException
 
 from syntropynac.decorators import *
 

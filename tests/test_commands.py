@@ -23,7 +23,7 @@ def test_yaml(runner, test_yaml):
         yield
 
 
-def testConfigure(runner, test_yaml, config_mock):
+def test_configure_networks(runner, test_yaml, config_mock):
     runner.invoke(ctl.configure_networks, ["test.yaml"])
     config_mock.assert_called_once_with(
         mock.ANY,
@@ -48,7 +48,7 @@ def testConfigure(runner, test_yaml, config_mock):
     )
 
 
-def testConfigureDry(runner, test_yaml, config_mock):
+def test_configure_networks__dry_run(runner, test_yaml, config_mock):
     runner.invoke(ctl.configure_networks, ["--dry-run", "test.yaml"])
     config_mock.assert_called_once_with(
         mock.ANY,
@@ -73,7 +73,7 @@ def testConfigureDry(runner, test_yaml, config_mock):
     )
 
 
-def testExportNetworks(
+def test_export_networks(
     runner, index_networks, p2p_connections, index_agents_ex, p2p_connection_services
 ):
     with mock.patch.object(
