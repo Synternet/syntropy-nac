@@ -1,14 +1,10 @@
-from collections import defaultdict
-from itertools import combinations
-
 import click
 import syntropy_sdk as sdk
 from syntropy_sdk import utils
-from syntropy_sdk.rest import ApiException
 
-from syntropynac import fields, resolve, transform
+from syntropynac import resolve, transform
 from syntropynac.exceptions import ConfigureNetworkError
-from syntropynac.fields import ConfigFields, PeerState, PeerType
+from syntropynac.fields import ConfigFields, PeerState
 
 
 def configure_connection(api, config, connection, silent=False):

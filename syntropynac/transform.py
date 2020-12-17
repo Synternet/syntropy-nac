@@ -2,8 +2,6 @@ from collections import defaultdict
 
 import click
 import syntropy_sdk as sdk
-from syntropy_sdk.rest import ApiException
-from syntropy_sdk.utils import *
 
 from syntropynac.exceptions import ConfigureNetworkError
 from syntropynac.fields import ConfigFields, PeerState, PeerType

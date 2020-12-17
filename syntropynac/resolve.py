@@ -1,12 +1,9 @@
 import functools
-from collections import defaultdict
 from dataclasses import dataclass
 from itertools import combinations
 
 import click
-import syntropy_sdk as sdk
 from syntropy_sdk import utils
-from syntropy_sdk.rest import ApiException
 
 from syntropynac.exceptions import ConfigureNetworkError
 from syntropynac.fields import ConfigFields, PeerState, PeerType

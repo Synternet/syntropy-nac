@@ -1,8 +1,5 @@
 #!/usr/bin/env python
-import functools
 import json
-import os
-from datetime import datetime, timedelta
 
 import click
 import syntropy_sdk as sdk
