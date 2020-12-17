@@ -1,0 +1,37 @@
+name: Tests
+
+on:
+  - push
+  - pull_request
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.6, 3.7, 3.8]
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python }}
+    - name: Install dependencies
+      run: |
+        pip3 install --upgrade pip
+        pip3 install --upgrade setuptools wheel
+    - name: Build the wheel
+      run: |
+        python3 setup.py sdist bdist_wheel
+    - name: Try installing the wheel
+      run: |
+        pip3 install `ls dist/*.whl`
+        python3 -c "import syntropy_sdk"
+        syntropynac --help
+        pip3 uninstall -y syntropy_sdk
+    - name: Test with pytest
+      run: |
+        pip3 install -r dev-requirements.txt
+        python3 -m pytest
