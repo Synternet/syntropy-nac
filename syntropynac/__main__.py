@@ -5,7 +5,7 @@ import click
 import syntropy_sdk as sdk
 import yaml
 
-from syntropynac import configure, fields, transform
+from syntropynac import configure, fields, transform, utils
 from syntropynac.decorators import syntropy_platform
 
 
@@ -117,14 +117,11 @@ def export_networks(network, skip, take, topology, to_json, platform):
             )
             return
 
-    networks = [
-        transform.transform_network(net)
-        for net in platform.index_networks(
-            filter=f"id|name:{network}" if network else None,
-            skip=skip,
-            take=take,
-        )["data"]
-    ]
+    networks = platform.index_networks(
+        filter=f"id|name:{network}" if network else None,
+        skip=skip,
+        take=take,
+    )["data"]
     if not networks:
         return
 
@@ -133,41 +130,9 @@ def export_networks(network, skip, take, topology, to_json, platform):
     )["data"]
     all_agents = {agent["agent_id"]: agent for agent in all_agents}
 
-    for net in networks:
-        connections_filter = f"networks[]:{net['id']}"
-        connections = sdk.utils.WithRetry(platform.index_connections)(
-            filter=connections_filter, take=sdk.utils.TAKE_MAX_ITEMS_PER_CALL
-        )["data"]
-        ids = [connection["agent_connection_id"] for connection in connections]
-        if ids:
-            connections_services = sdk.utils.BatchedRequest(
-                platform.get_connection_services,
-                max_payload_size=sdk.utils.MAX_QUERY_FIELD_SIZE,
-            )(ids)["data"]
-            connection_services = {
-                connection["agent_connection_id"]: connection
-                for connection in connections_services
-            }
-        net_connections = [
-            {
-                **connection,
-                "agent_connection_services": connection_services.get(
-                    connection["agent_connection_id"], {}
-                ),
-            }
-            for connection in connections
-            if connection["network"]["network_id"] == net["id"]
-        ]
-        transformed_connections = transform.transform_connections(
-            all_agents,
-            net_connections,
-            topology if topology else net[fields.ConfigFields.TOPOLOGY],
-        )
-        if transformed_connections:
-            net[fields.ConfigFields.CONNECTIONS] = transformed_connections
-        if topology:
-            net["topology"] = topology
-        del net["use_sdn"]
+    networks = [
+        utils.export_network(platform, all_agents, net, topology) for net in networks
+    ]
 
     if to_json:
         click.echo(json.dumps(networks, indent=4))
