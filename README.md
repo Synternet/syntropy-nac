@@ -1,3 +1,6 @@
+![Tests](https://github.com/SyntropyNet/syntropy-nac/workflows/Tests/badge.svg)
+![PyPi](https://github.com/SyntropyNet/syntropy-nac/workflows/PyPi/badge.svg)
+
 # Syntropy NAC
 Syntropy Network As Code library and command line utility. 
 
