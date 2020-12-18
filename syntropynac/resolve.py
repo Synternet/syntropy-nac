@@ -59,7 +59,7 @@ def resolve_agent_by_name(api, name, silent=False):
     return [
         agent["agent_id"]
         for agent in utils.WithRetry(api.index_agents)(
-            filter=f"agent_name:{name}", load_relations=False
+            filter=f"name:'{name}'", load_relations=False
         )["data"]
     ]
 
