@@ -509,7 +509,7 @@ def configure_network(api, config, dry_run, silent=False):
     )
 
     networks = utils.WithRetry(api.index_networks)(
-        filter=f"id|name:{name if id is None else id}",
+        filter=f"id|name:'{name if id is None else id}'",
         take=utils.TAKE_MAX_ITEMS_PER_CALL,
     )["data"]
     networks = [

@@ -118,7 +118,7 @@ def export_networks(network, skip, take, topology, to_json, platform):
             return
 
     networks = platform.index_networks(
-        filter=f"id|name:{network}" if network else None,
+        filter=f"id|name:'{network}'" if network else None,
         skip=skip,
         take=take,
     )["data"]
