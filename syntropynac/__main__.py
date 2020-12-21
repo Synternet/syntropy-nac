@@ -11,7 +11,7 @@ from syntropynac.decorators import syntropy_platform
 
 @click.group()
 def apis():
-    """Syntropy Network As Code cli tool"""
+    """Syntropy Network As Code Command Line Interface."""
 
 
 @apis.command()
@@ -20,7 +20,7 @@ def apis():
     "--network",
     default=None,
     type=str,
-    help="Filter configuration file networks by name",
+    help="Filter configuration file networks by name.",
 )
 @click.option(
     "--dry-run",
@@ -34,7 +34,7 @@ def apis():
     "from_json",
     is_flag=True,
     default=False,
-    help="Imports configuration from JSON instead of YAML",
+    help="Imports configuration from JSON instead of YAML.",
 )
 @syntropy_platform
 def configure_networks(config, network, dry_run, from_json, platform):
@@ -84,17 +84,19 @@ def configure_networks(config, network, dry_run, from_json, platform):
 
 
 @apis.command()
-@click.option("--network", default=None, type=str, help="Filter networks by name or ID")
-@click.option("--skip", default=0, type=int, help="Skip N networks")
-@click.option("--take", default=42, type=int, help="Take N networks")
-@click.option("--topology", default=None, type=str, help="Override network topology")
+@click.option(
+    "--network", default=None, type=str, help="Filter networks by name or ID."
+)
+@click.option("--skip", default=0, type=int, help="Skip N networks.")
+@click.option("--take", default=42, type=int, help="Take N networks.")
+@click.option("--topology", default=None, type=str, help="Override network topology.")
 @click.option(
     "--json",
     "-j",
     "to_json",
     is_flag=True,
     default=False,
-    help="Outputs a JSON instead of YAML",
+    help="Outputs a JSON instead of YAML.",
 )
 @syntropy_platform
 def export_networks(network, skip, take, topology, to_json, platform):
