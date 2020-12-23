@@ -102,36 +102,40 @@ def api(
     networks,
     connections,
     created_connections,
-    index_agents_stub,
+    platform_agent_index_stub,
     connection_services_stub,
 ):
     api = mock.Mock(spec=sdk.PlatformApi)
-    api.index_networks = mock.Mock(
-        spec=sdk.PlatformApi.index_networks, return_value={"data": networks}
+    api.platform_network_index = mock.Mock(
+        spec=sdk.PlatformApi.platform_network_index, return_value={"data": networks}
     )
-    api.index_connections = mock.Mock(
-        spec=sdk.PlatformApi.index_connections,
+    api.platform_connection_index = mock.Mock(
+        spec=sdk.PlatformApi.platform_connection_index,
         return_value={"data": connections},
     )
-    api.create_network = mock.Mock(
-        spec=sdk.PlatformApi.create_network,
+    api.platform_network_create = mock.Mock(
+        spec=sdk.PlatformApi.platform_network_create,
         return_value={"data": {"network_id": 321}},
     )
-    api.create_connections = mock.Mock(
-        spec=sdk.PlatformApi.create_connections,
+    api.platform_connection_create = mock.Mock(
+        spec=sdk.PlatformApi.platform_connection_create,
         return_value={"data": created_connections},
     )
-    api.delete_connection = mock.Mock(spec=sdk.PlatformApi.delete_connection)
-    api.delete_networks = mock.Mock(spec=sdk.PlatformApi.delete_networks)
-    api.index_agents = mock.Mock(
-        spec=sdk.PlatformApi.index_agents, side_effect=index_agents_stub
+    api.platform_connection_destroy = mock.Mock(
+        spec=sdk.PlatformApi.platform_connection_destroy
     )
-    api.get_connection_services = mock.Mock(
-        spec=sdk.PlatformApi.get_connection_services,
+    api.platform_network_destroy = mock.Mock(
+        spec=sdk.PlatformApi.platform_network_destroy
+    )
+    api.platform_agent_index = mock.Mock(
+        spec=sdk.PlatformApi.platform_agent_index, side_effect=platform_agent_index_stub
+    )
+    api.platform_connection_service_show = mock.Mock(
+        spec=sdk.PlatformApi.platform_connection_service_show,
         side_effect=connection_services_stub,
     )
-    api.update_connection_services = mock.Mock(
-        spec=sdk.PlatformApi.update_connection_services,
+    api.platform_connection_service_update = mock.Mock(
+        spec=sdk.PlatformApi.platform_connection_service_update,
     )
     return api
 
@@ -173,7 +177,7 @@ def test_configure_connection(
     assert configure.configure_connection(api, config, connection, silent=False) == len(
         result
     )
-    assert api.update_connection_services.call_args_list[-1] == mock.call(
+    assert api.platform_connection_service_update.call_args_list[-1] == mock.call(
         body={
             "connectionId": 169,
             "changes": [
@@ -264,8 +268,8 @@ def test_create_network__dry_run(api):
         return_value=[[1, 2], [3, 4], []],
     ) as the_mock:
         assert configure.configure_network_create(api, config, True) == False
-        assert api.create_network.call_count == 0
-        assert api.create_connections.call_count == 0
+        assert api.platform_network_create.call_count == 0
+        assert api.platform_connection_create.call_count == 0
 
 
 def test_create_network__p2p(api, config_mock):
@@ -299,7 +303,7 @@ def test_create_network__p2p(api, config_mock):
     ) as the_mock:
         assert configure.configure_network_create(api, config, False) == True
         the_mock.assert_called_once()
-        assert api.create_network.call_args_list == [
+        assert api.platform_network_create.call_args_list == [
             mock.call(
                 body={
                     "network_name": "test",
@@ -312,7 +316,7 @@ def test_create_network__p2p(api, config_mock):
                 }
             )
         ]
-        assert api.create_connections.call_args_list == [
+        assert api.platform_connection_create.call_args_list == [
             mock.call(
                 body={
                     "network_id": 321,
@@ -351,7 +355,7 @@ def test_create_network__p2m(api, config_mock):
         return_value=([[1, 2], [3, 4]], [], []),
     ) as the_mock:
         assert configure.configure_network_create(api, config, False) == True
-        assert api.create_network.call_args_list == [
+        assert api.platform_network_create.call_args_list == [
             mock.call(
                 body={
                     "network_name": "test",
@@ -364,7 +368,7 @@ def test_create_network__p2m(api, config_mock):
                 }
             )
         ]
-        assert api.create_connections.call_args_list == [
+        assert api.platform_connection_create.call_args_list == [
             mock.call(
                 body={
                     "network_id": 321,
@@ -398,7 +402,7 @@ def test_create_network__mesh(api, config_mock):
         return_value=([[1, 2], [1, 4], [2, 4]], [], []),
     ) as the_mock:
         assert configure.configure_network_create(api, config, False) == True
-        assert api.create_network.call_args_list == [
+        assert api.platform_network_create.call_args_list == [
             mock.call(
                 body={
                     "network_name": "test",
@@ -411,7 +415,7 @@ def test_create_network__mesh(api, config_mock):
                 }
             )
         ]
-        assert api.create_connections.call_args_list == [
+        assert api.platform_connection_create.call_args_list == [
             mock.call(
                 body={
                     "network_id": 321,
@@ -429,8 +433,8 @@ def test_delete_network__dry_run(networks, api):
         )
         == False
     )
-    assert api.delete_networks.call_count == 0
-    assert api.delete_connection.call_count == 0
+    assert api.platform_network_destroy.call_count == 0
+    assert api.platform_connection_destroy.call_count == 0
 
 
 def test_delete_network(api, networks):
@@ -440,8 +444,8 @@ def test_delete_network(api, networks):
         )
         == True
     )
-    assert api.delete_networks.call_args_list == [mock.call(2)]
-    assert api.delete_connection.call_args_list == [
+    assert api.platform_network_destroy.call_args_list == [mock.call(2)]
+    assert api.platform_connection_destroy.call_args_list == [
         mock.call(1),
         mock.call(2),
     ]
@@ -473,10 +477,10 @@ def test_update_network__p2p_dry_run(api, networks):
         )
         == False
     )
-    assert api.index_connections.call_count == 1
-    assert api.create_network.call_count == 0
-    assert api.delete_connection.call_count == 0
-    assert api.create_connections.call_count == 0
+    assert api.platform_connection_index.call_count == 1
+    assert api.platform_network_create.call_count == 0
+    assert api.platform_connection_destroy.call_count == 0
+    assert api.platform_connection_create.call_count == 0
 
 
 def test_update_network__p2p(api, networks, config_mock):
@@ -500,12 +504,12 @@ def test_update_network__p2p(api, networks, config_mock):
         )
         == True
     )
-    assert api.index_connections.call_count == 1
-    assert api.create_network.call_count == 0
-    assert api.delete_connection.call_args_list == [
+    assert api.platform_connection_index.call_count == 1
+    assert api.platform_network_create.call_count == 0
+    assert api.platform_connection_destroy.call_args_list == [
         mock.call(0),
     ]
-    assert api.create_connections.call_args_list == [
+    assert api.platform_connection_create.call_args_list == [
         mock.call(
             body={
                 "network_id": 1,
@@ -539,10 +543,10 @@ def test_update_network__p2m_dry_run(api, networks):
         )
         == False
     )
-    assert api.index_connections.call_count == 1
-    assert api.create_network.call_count == 0
-    assert api.delete_connection.call_count == 0
-    assert api.create_connections.call_count == 0
+    assert api.platform_connection_index.call_count == 1
+    assert api.platform_network_create.call_count == 0
+    assert api.platform_connection_destroy.call_count == 0
+    assert api.platform_connection_create.call_count == 0
 
 
 def test_update_network__p2m(api, networks, config_mock):
@@ -567,12 +571,12 @@ def test_update_network__p2m(api, networks, config_mock):
         )
         == True
     )
-    assert api.index_connections.call_count == 1
-    assert api.create_network.call_count == 0
-    assert api.delete_connection.call_args_list == [
+    assert api.platform_connection_index.call_count == 1
+    assert api.platform_network_create.call_count == 0
+    assert api.platform_connection_destroy.call_args_list == [
         mock.call(1),
     ]
-    assert api.create_connections.call_args_list == [
+    assert api.platform_connection_create.call_args_list == [
         mock.call(
             body={
                 "network_id": 2,
@@ -610,10 +614,10 @@ def test_update_network__mesh_dry_run(api, networks):
         )
         == False
     )
-    assert api.index_connections.call_count == 1
-    assert api.create_network.call_count == 0
-    assert api.delete_connection.call_count == 0
-    assert api.create_connections.call_count == 0
+    assert api.platform_connection_index.call_count == 1
+    assert api.platform_network_create.call_count == 0
+    assert api.platform_connection_destroy.call_count == 0
+    assert api.platform_connection_create.call_count == 0
 
 
 def test_update_network__mesh(api, networks, config_mock):
@@ -642,13 +646,13 @@ def test_update_network__mesh(api, networks, config_mock):
         )
         == True
     )
-    assert api.index_connections.call_count == 1
-    assert api.create_network.call_count == 0
-    assert api.delete_connection.call_args_list == [
+    assert api.platform_connection_index.call_count == 1
+    assert api.platform_network_create.call_count == 0
+    assert api.platform_connection_destroy.call_args_list == [
         mock.call(4),
         mock.call(6),
     ]
-    assert api.create_connections.call_args_list == [
+    assert api.platform_connection_create.call_args_list == [
         mock.call(
             body={
                 "network_id": 3,

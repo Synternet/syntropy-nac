@@ -119,7 +119,7 @@ def export_networks(network, skip, take, topology, to_json, platform):
             )
             return
 
-    networks = platform.index_networks(
+    networks = platform.platform_network_index(
         filter=f"id|name:'{network}'" if network else None,
         skip=skip,
         take=take,
@@ -127,7 +127,7 @@ def export_networks(network, skip, take, topology, to_json, platform):
     if not networks:
         return
 
-    all_agents = sdk.utils.WithRetry(platform.index_agents)(
+    all_agents = sdk.utils.WithRetry(platform.platform_agent_index)(
         take=sdk.utils.TAKE_MAX_ITEMS_PER_CALL
     )["data"]
     all_agents = {agent["agent_id"]: agent for agent in all_agents}

@@ -59,8 +59,8 @@ connections:
 
 
 @pytest.fixture
-def all_agents(index_agents_stub):
-    return {agent["agent_id"]: agent for agent in index_agents_stub()["data"]}
+def all_agents(platform_agent_index_stub):
+    return {agent["agent_id"]: agent for agent in platform_agent_index_stub()["data"]}
 
 
 @pytest.fixture
@@ -530,12 +530,12 @@ def index_connections_ex():
 
 
 @pytest.fixture
-def index_agents_ex():
+def platform_agent_index_ex():
     return {"data": []}
 
 
 @pytest.fixture
-def index_agents_stub():
+def platform_agent_index_stub():
     def func(*args, **kwargs):
         if "filter" not in kwargs:
             return {

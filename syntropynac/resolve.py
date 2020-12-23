@@ -58,7 +58,7 @@ class ConnectionServices:
 def resolve_agent_by_name(api, name, silent=False):
     return [
         agent["agent_id"]
-        for agent in utils.WithRetry(api.index_agents)(
+        for agent in utils.WithRetry(api.platform_agent_index)(
             filter=f"name:'{name}'", load_relations=False
         )["data"]
     ]
@@ -66,9 +66,9 @@ def resolve_agent_by_name(api, name, silent=False):
 
 @functools.lru_cache(maxsize=None)
 def get_all_agents(api, silent=False):
-    all_agents = utils.WithRetry(api.index_agents)(take=utils.TAKE_MAX_ITEMS_PER_CALL)[
-        "data"
-    ]
+    all_agents = utils.WithRetry(api.platform_agent_index)(
+        take=utils.TAKE_MAX_ITEMS_PER_CALL
+    )["data"]
     return {agent["agent_id"]: agent for agent in all_agents}
 
 
@@ -220,7 +220,7 @@ def expand_agents_tags(api, dst_dict, silent=False):
         if dst.get(ConfigFields.PEER_TYPE) != PeerType.TAG:
             continue
 
-        agents = utils.WithRetry(api.index_agents)(
+        agents = utils.WithRetry(api.platform_agent_index)(
             filter=f"tags_names[]:{name}", take=utils.TAKE_MAX_ITEMS_PER_CALL
         )["data"]
         if not agents:

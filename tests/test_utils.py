@@ -12,7 +12,7 @@ def api(
     p2p_connections,
     p2m_connections,
     mesh_connections,
-    index_agents_stub,
+    platform_agent_index_stub,
     p2p_connection_services,
 ):
     def get_connections(*args, filter=None, **kwargs):
@@ -26,15 +26,15 @@ def api(
             return None
 
     api = mock.Mock(spec=sdk.PlatformApi)
-    api.index_connections = mock.Mock(
-        spec=sdk.PlatformApi.index_connections,
+    api.platform_connection_index = mock.Mock(
+        spec=sdk.PlatformApi.platform_connection_index,
         side_effect=get_connections,
     )
-    api.index_agents = mock.Mock(
-        spec=sdk.PlatformApi.index_agents, side_effect=index_agents_stub
+    api.platform_agent_index = mock.Mock(
+        spec=sdk.PlatformApi.platform_agent_index, side_effect=platform_agent_index_stub
     )
-    api.get_connection_services = mock.Mock(
-        spec=sdk.PlatformApi.get_connection_services,
+    api.platform_connection_service_show = mock.Mock(
+        spec=sdk.PlatformApi.platform_connection_service_show,
         return_value={"data": p2p_connection_services},
     )
     return api

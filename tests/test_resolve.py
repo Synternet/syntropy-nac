@@ -7,14 +7,14 @@ from syntropynac import exceptions, resolve
 
 
 @pytest.fixture
-def api(index_agents_stub, connection_services_stub):
+def api(platform_agent_index_stub, connection_services_stub):
     api = mock.Mock(spec=sdk.PlatformApi)
-    api.index_agents = mock.Mock(
-        spec=sdk.PlatformApi.index_agents,
-        side_effect=index_agents_stub,
+    api.platform_agent_index = mock.Mock(
+        spec=sdk.PlatformApi.platform_agent_index,
+        side_effect=platform_agent_index_stub,
     )
-    api.get_connection_services = mock.Mock(
-        spec=sdk.PlatformApi.get_connection_services,
+    api.platform_connection_service_show = mock.Mock(
+        spec=sdk.PlatformApi.platform_connection_service_show,
         side_effect=connection_services_stub,
     )
     return api
@@ -193,7 +193,7 @@ def test_expand_agents_tags__except_tag(api):
         },
     }
 
-    def index_agents(filter=None, take=None):
+    def platform_agent_index(filter=None, take=None):
         if "test1" in filter:
             return {
                 "data": [
@@ -215,7 +215,7 @@ def test_expand_agents_tags__except_tag(api):
                 ]
             }
 
-    api.index_agents.side_effect = index_agents
+    api.platform_agent_index.side_effect = platform_agent_index
     assert resolve.expand_agents_tags(api, config) == {
         "test 0": {
             "type": "endpoint",

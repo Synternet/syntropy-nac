@@ -74,26 +74,30 @@ def test_configure_networks__dry_run(runner, test_yaml, config_mock):
 
 
 def test_export_networks(
-    runner, index_networks, p2p_connections, index_agents_ex, p2p_connection_services
+    runner,
+    index_networks,
+    p2p_connections,
+    platform_agent_index_ex,
+    p2p_connection_services,
 ):
     with mock.patch.object(
         sdk.PlatformApi,
-        "index_networks",
+        "platform_network_index",
         autospec=True,
         return_value=index_networks,
     ) as index_net, mock.patch.object(
         sdk.PlatformApi,
-        "index_connections",
+        "platform_connection_index",
         autospec=True,
         return_value={"data": p2p_connections},
     ) as index_conn, mock.patch.object(
         sdk.PlatformApi,
-        "index_agents",
+        "platform_agent_index",
         autospec=True,
-        return_value=index_agents_ex,
+        return_value=platform_agent_index_ex,
     ) as index_ag, mock.patch.object(
         sdk.PlatformApi,
-        "get_connection_services",
+        "platform_connection_service_show",
         autospec=True,
         return_value={"data": p2p_connection_services},
     ) as services_mock:

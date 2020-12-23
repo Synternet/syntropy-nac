@@ -46,7 +46,7 @@ def configure_connection(api, config, connection, silent=False):
         "changes": changes,
     }
     utils.BatchedRequest(
-        api.update_connection_services,
+        api.platform_connection_service_update,
         max_payload_size=utils.MAX_PAYLOAD_SIZE,
         translator=utils._default_translator("changes"),
     )(body=body)
@@ -58,7 +58,7 @@ def configure_connections(api, services_config, connections, silent=False):
     if not ids:
         return 0, 0
     connections_services = utils.BatchedRequest(
-        api.get_connection_services,
+        api.platform_connection_service_show,
         max_payload_size=utils.MAX_QUERY_FIELD_SIZE,
     )(ids)["data"]
 
@@ -246,7 +246,7 @@ def configure_network_create(api, config, dry_run, silent=False):
             f"Would create network {config[ConfigFields.NAME]} as {topology}"
         )
     else:
-        result = utils.WithRetry(api.create_network)(body=body)
+        result = utils.WithRetry(api.platform_network_create)(body=body)
         network_id = result["data"]["network_id"]
         not silent and click.echo(
             f"Created network {config[ConfigFields.NAME]} with id {network_id}"
@@ -264,7 +264,7 @@ def configure_network_create(api, config, dry_run, silent=False):
         return False
     else:
         connections = utils.BatchedRequest(
-            api.create_connections,
+            api.platform_connection_create,
             translator=utils._default_translator("agent_ids"),
             max_payload_size=utils.MAX_PAYLOAD_SIZE,
         )(body=body)["data"]
@@ -292,7 +292,7 @@ def configure_network_delete(api, network, dry_run, silent=False):
     Returns:
         (bool): True if any changes were made and False otherwise
     """
-    connections = utils.WithRetry(api.index_connections)(
+    connections = utils.WithRetry(api.platform_connection_index)(
         filter=f"networks[]:{network['id']}", take=utils.TAKE_MAX_ITEMS_PER_CALL
     )
     for connection in connections["data"]:
@@ -303,7 +303,9 @@ def configure_network_delete(api, network, dry_run, silent=False):
                 f"Would delete connection {connection['agent_connection_id']}..."
             )
         else:
-            utils.WithRetry(api.delete_connection)(connection["agent_connection_id"])
+            utils.WithRetry(api.platform_connection_destroy)(
+                connection["agent_connection_id"]
+            )
             not silent and click.echo(
                 f"Deleted connection {connection['agent_connection_id']}."
             )
@@ -314,7 +316,7 @@ def configure_network_delete(api, network, dry_run, silent=False):
         )
         return False
     else:
-        utils.WithRetry(api.delete_networks)(network["id"])
+        utils.WithRetry(api.platform_network_destroy)(network["id"])
         not silent and click.echo(f"Deleted network {network['name']}")
         return True
 
@@ -367,7 +369,7 @@ def configure_network_update(api, network, config, dry_run, silent=False):
                 fg="yellow",
             )
 
-    connections = utils.WithRetry(api.index_connections)(
+    connections = utils.WithRetry(api.platform_connection_index)(
         filter=f"networks[]:{network[ConfigFields.ID]}",
         take=utils.TAKE_MAX_ITEMS_PER_CALL,
     )["data"]
@@ -433,7 +435,7 @@ def configure_network_update(api, network, config, dry_run, silent=False):
         if dry_run:
             not silent and click.echo(f"Would remove connection {item}.")
         else:
-            utils.WithRetry(api.delete_connection)(item)
+            utils.WithRetry(api.platform_connection_destroy)(item)
             not silent and click.echo(f"Removed connection {item}.")
 
     added_connections = []
@@ -446,7 +448,7 @@ def configure_network_update(api, network, config, dry_run, silent=False):
             "network_update_by": sdk.NetworkGenesisType.CONFIG,
         }
         added_connections = utils.BatchedRequest(
-            api.create_connections,
+            api.platform_connection_create,
             translator=utils._default_translator("agent_ids"),
             max_payload_size=utils.MAX_PAYLOAD_SIZE,
         )(body=body, update_type=sdk.UpdateType.APPEND_NEW)["data"]
@@ -508,7 +510,7 @@ def configure_network(api, config, dry_run, silent=False):
         f"Configuring network {name} {id if id else ''}", fg="green"
     )
 
-    networks = utils.WithRetry(api.index_networks)(
+    networks = utils.WithRetry(api.platform_network_index)(
         filter=f"id|name:'{name if id is None else id}'",
         take=utils.TAKE_MAX_ITEMS_PER_CALL,
     )["data"]

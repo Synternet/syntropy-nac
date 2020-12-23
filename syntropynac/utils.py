@@ -6,13 +6,13 @@ from syntropynac import fields, transform
 def export_network(api, all_agents, network, topology):
     net = transform.transform_network(network)
     connections_filter = f"networks[]:{net['id']}"
-    connections = sdk.utils.WithRetry(api.index_connections)(
+    connections = sdk.utils.WithRetry(api.platform_connection_index)(
         filter=connections_filter, take=sdk.utils.TAKE_MAX_ITEMS_PER_CALL
     )["data"]
     ids = [connection["agent_connection_id"] for connection in connections]
     if ids:
         connections_services = sdk.utils.BatchedRequest(
-            api.get_connection_services,
+            api.platform_connection_service_show,
             max_payload_size=sdk.utils.MAX_QUERY_FIELD_SIZE,
         )(ids)["data"]
         connection_services = {
