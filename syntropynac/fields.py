@@ -20,3 +20,4 @@ class ConfigFields:
     PEER_TYPE = "type"
     USE_SDN = "use_sdn"
     IGNORE_NETWORK_TOPOLOGY = "ignore_configured_topology"
+    ENDPOINTS = "endpoints"

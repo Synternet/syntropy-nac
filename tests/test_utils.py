@@ -25,6 +25,18 @@ def api(
         else:
             return None
 
+    def get_services(ids):
+        return {
+            "data": [
+                {
+                    "agent_id": id,
+                    "agent_service_name": service,
+                }
+                for id in ids
+                for service in ("nginx", "redis")
+            ]
+        }
+
     api = mock.Mock(spec=sdk.PlatformApi)
     api.platform_connection_index = mock.Mock(
         spec=sdk.PlatformApi.platform_connection_index,
@@ -36,6 +48,10 @@ def api(
     api.platform_connection_service_show = mock.Mock(
         spec=sdk.PlatformApi.platform_connection_service_show,
         return_value={"data": p2p_connection_services},
+    )
+    api.platform_agent_service_index = mock.Mock(
+        spec=sdk.PlatformApi.platform_agent_service_index,
+        side_effect=get_services,
     )
     return api
 
@@ -83,6 +99,21 @@ def api(
                         "type": "endpoint",
                     },
                 },
+                "endpoints": {
+                    "auto gen 0": {"id": 0, "services": ["nginx", "redis"]},
+                    "auto gen 10": {"id": 10, "services": ["nginx", "redis"]},
+                    "auto gen 11": {"id": 11, "services": ["nginx", "redis"]},
+                    "auto gen 12": {"id": 12, "services": ["nginx", "redis"]},
+                    "auto gen 13": {"id": 13, "services": ["nginx", "redis"]},
+                    "auto gen 14": {"id": 14, "services": ["nginx", "redis"]},
+                    "auto gen 15": {"id": 15, "services": ["nginx", "redis"]},
+                    "auto gen 16": {"id": 16, "services": ["nginx", "redis"]},
+                    "auto gen 5": {"id": 5, "services": ["nginx", "redis"]},
+                    "auto gen 6": {"id": 6, "services": ["nginx", "redis"]},
+                    "auto gen 7": {"id": 7, "services": ["nginx", "redis"]},
+                    "auto gen 8": {"id": 8, "services": ["nginx", "redis"]},
+                    "auto gen 9": {"id": 9, "services": ["nginx", "redis"]},
+                },
                 "id": 321,
                 "name": "test",
                 "state": "present",
@@ -127,6 +158,21 @@ def api(
                         "type": "endpoint",
                     },
                 },
+                "endpoints": {
+                    "auto gen 0": {"id": 0, "services": ["nginx", "redis"]},
+                    "auto gen 10": {"id": 10, "services": ["nginx", "redis"]},
+                    "auto gen 11": {"id": 11, "services": ["nginx", "redis"]},
+                    "auto gen 12": {"id": 12, "services": ["nginx", "redis"]},
+                    "auto gen 13": {"id": 13, "services": ["nginx", "redis"]},
+                    "auto gen 14": {"id": 14, "services": ["nginx", "redis"]},
+                    "auto gen 15": {"id": 15, "services": ["nginx", "redis"]},
+                    "auto gen 16": {"id": 16, "services": ["nginx", "redis"]},
+                    "auto gen 2": {"id": 2, "services": ["nginx", "redis"]},
+                    "auto gen 3": {"id": 3, "services": ["nginx", "redis"]},
+                    "auto gen 7": {"id": 7, "services": ["nginx", "redis"]},
+                    "auto gen 8": {"id": 8, "services": ["nginx", "redis"]},
+                    "auto gen 9": {"id": 9, "services": ["nginx", "redis"]},
+                },
                 "id": 123,
                 "name": "test",
                 "state": "present",
@@ -167,6 +213,21 @@ def api(
                         "state": "present",
                         "type": "endpoint",
                     },
+                },
+                "endpoints": {
+                    "auto gen 0": {"id": 0, "services": ["nginx", "redis"]},
+                    "auto gen 1": {"id": 1, "services": ["nginx", "redis"]},
+                    "auto gen 14": {"id": 14, "services": ["nginx", "redis"]},
+                    "auto gen 15": {"id": 15, "services": ["nginx", "redis"]},
+                    "auto gen 16": {"id": 16, "services": ["nginx", "redis"]},
+                    "auto gen 2": {"id": 2, "services": ["nginx", "redis"]},
+                    "auto gen 3": {"id": 3, "services": ["nginx", "redis"]},
+                    "auto gen 4": {"id": 4, "services": ["nginx", "redis"]},
+                    "auto gen 5": {"id": 5, "services": ["nginx", "redis"]},
+                    "auto gen 6": {"id": 6, "services": ["nginx", "redis"]},
+                    "auto gen 7": {"id": 7, "services": ["nginx", "redis"]},
+                    "auto gen 8": {"id": 8, "services": ["nginx", "redis"]},
+                    "auto gen 9": {"id": 9, "services": ["nginx", "redis"]},
                 },
                 "id": 456,
                 "name": "test",
@@ -238,6 +299,22 @@ def api(
                         "type": "endpoint",
                     },
                 },
+                "endpoints": {
+                    "auto gen 0": {"id": 0, "services": ["nginx", "redis"]},
+                    "auto gen 1": {"id": 1, "services": ["nginx", "redis"]},
+                    "auto gen 14": {"id": 14, "services": ["nginx", "redis"]},
+                    "auto gen 15": {"id": 15, "services": ["nginx", "redis"]},
+                    "auto gen 16": {"id": 16, "services": ["nginx", "redis"]},
+                    "auto gen 2": {"id": 2, "services": ["nginx", "redis"]},
+                    "auto gen 3": {"id": 3, "services": ["nginx", "redis"]},
+                    "auto gen 4": {"id": 4, "services": ["nginx", "redis"]},
+                    "auto gen 5": {"id": 5, "services": ["nginx", "redis"]},
+                    "auto gen 6": {"id": 6, "services": ["nginx", "redis"]},
+                    "auto gen 7": {"id": 7, "services": ["nginx", "redis"]},
+                    "auto gen 8": {"id": 8, "services": ["nginx", "redis"]},
+                    "auto gen 9": {"id": 9, "services": ["nginx", "redis"]},
+                },
+                "ignore_configured_topology": True,
                 "id": 456,
                 "name": "test",
                 "state": "present",
@@ -247,4 +324,11 @@ def api(
     ],
 )
 def test_export_network(api, all_agents, network, topology, result):
+    ids = list(all_agents.keys())
+    for id in ids:
+        if id > 16:
+            del all_agents[id]
+    for id in all_agents:
+        all_agents[id]["networks"] = [network]
     assert utils.export_network(api, all_agents, network, topology) == result
+    api.platform_agent_service_index.assert_called_once()
