@@ -115,6 +115,60 @@ def test_expand_agents_tags__present(api):
     }
 
 
+VALIDATE_CONNECTIONS_TESTS = (
+    {"": {"type": "endpoint"}},
+    {"a": {"type": "id"}},
+    {123: {"type": "id", "id": 321}},
+    {"123": {"type": "id", "id": 321}},
+    {"a": ""},
+    {"a": {}},
+    {"a": {"type": "id", "id": ""}},
+    {"b": {"type": "id", "id": "b"}},
+    {"a": {"type": "id", "connect_to": {"b": ""}}},
+    {"a": {"type": "id", "connect_to": {"b": {"type": "fail"}}}},
+    {"a": {"type": "fail"}},
+    {"a": {"type": "id", "services": {}}},
+    {"a": {"type": "id", "services": [{"a": 1}]}},
+)
+
+
+@pytest.mark.parametrize("connections", VALIDATE_CONNECTIONS_TESTS)
+def test_validate_connections__fail_cli(connections):
+    assert not resolve.validate_connections(connections)
+
+
+@pytest.mark.parametrize("connections", VALIDATE_CONNECTIONS_TESTS)
+def test_validate_connections__fail_ansible(connections):
+    with pytest.raises(exceptions.ConfigureNetworkError):
+        resolve.validate_connections(connections, silent=True)
+
+
+@pytest.mark.parametrize(
+    "connections",
+    (
+        {"13": {"type": "id"}},
+        {13: {"type": "id"}},
+        {13: {"type": "id", "id": 13}},
+        {13: {"type": "id", "id": "13"}},
+        {"13": {"type": "id", "id": 13}},
+        {"a": {"type": "endpoint"}},
+        {"a": {"type": "tag"}},
+        {"12": {"type": "id", "connect_to": {"1": {"type": "id"}}}},
+        {"1": {"type": "id", "connect_to": {"b": {"type": "endpoint"}}}},
+        {"1": {"type": "id", "connect_to": {"b": {"type": "tag"}}}},
+        {"a": {"type": "endpoint", "connect_to": {"1": {"type": "id"}}}},
+        {"a": {"type": "endpoint", "connect_to": {"b": {"type": "endpoint"}}}},
+        {"a": {"type": "endpoint", "connect_to": {"b": {"type": "tag"}}}},
+        {"a": {"type": "tag", "connect_to": {"1": {"type": "id"}}}},
+        {"a": {"type": "tag", "connect_to": {"b": {"type": "endpoint"}}}},
+        {"a": {"type": "tag", "connect_to": {"b": {"type": "tag"}}}},
+        {"1": {"type": "id", "services": ["a", "b", 1]}},
+    ),
+)
+def test_validate_connections__success(connections):
+    assert resolve.validate_connections(connections)
+
+
 def test_expand_agents_tags__present_services(api):
     config = {
         "test": {

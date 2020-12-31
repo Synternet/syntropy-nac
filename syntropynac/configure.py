@@ -506,6 +506,32 @@ def configure_network(api, config, dry_run, silent=False):
         else:
             raise ConfigureNetworkError(error)
 
+    if not isinstance(name, (str, int)) or not name:
+        error = f"Invalid network name."
+        if not silent:
+            click.secho(error, fg="red", err=True)
+            return False
+        else:
+            raise ConfigureNetworkError(error)
+
+    if ConfigFields.ID in config and (not isinstance(id, int) or not id):
+        error = f"Invalid network id."
+        if not silent:
+            click.secho(error, fg="red", err=True)
+            return False
+        else:
+            raise ConfigureNetworkError(error)
+
+    if not resolve.validate_connections(
+        config.get(ConfigFields.CONNECTIONS, {}), silent
+    ):
+        error = f"Invalid {ConfigFields.CONNECTIONS} format."
+        if not silent:
+            click.secho(error, fg="red", err=True)
+            return False
+        else:
+            raise ConfigureNetworkError(error)
+
     not silent and click.secho(
         f"Configuring network {name} {id if id else ''}", fg="green"
     )

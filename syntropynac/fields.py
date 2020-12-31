@@ -21,3 +21,10 @@ class ConfigFields:
     USE_SDN = "use_sdn"
     IGNORE_NETWORK_TOPOLOGY = "ignore_configured_topology"
     ENDPOINTS = "endpoints"
+
+
+ALLOWED_PEER_TYPES = (
+    PeerType.ENDPOINT,
+    PeerType.TAG,
+    PeerType.ID,
+)

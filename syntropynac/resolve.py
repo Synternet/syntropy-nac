@@ -6,7 +6,7 @@ import click
 from syntropy_sdk import utils
 
 from syntropynac.exceptions import ConfigureNetworkError
-from syntropynac.fields import ConfigFields, PeerState, PeerType
+from syntropynac.fields import ALLOWED_PEER_TYPES, ConfigFields, PeerState, PeerType
 
 
 @dataclass
@@ -151,6 +151,152 @@ def resolve_present_absent(agents, present, absent):
     )
 
 
+def validate_connections(connections, silent=False, level=0):
+    """Check if the connections structure makes any sense.
+    Recursively goes inside 'connect_to' dictionary up to 1 level.
+
+    Args:
+        connections (dict): A dictionary describing connections.
+        silent (bool, optional): Indicates whether to suppress output to stderr.
+            Raises ConfigureNetworkError instead. Defaults to False.
+        level (int, optional): Recursion level depth. Defaults to 0.
+
+    Raises:
+        ConfigureNetworkError: If silent==True, then raise an exception in case of irrecoverable error.
+
+    Returns:
+        bool: Returns False in case of invalid connections structure.
+    """
+    if level > 1:
+        silent or click.secho(
+            (
+                f"Field {ConfigFields.CONNECT_TO} found at level {level + 1}. This will be ignored, "
+                "however, please double check your configuration file."
+            )
+        )
+        return True
+
+    for name, con in connections.items():
+        if not name or not isinstance(name, (str, int)):
+            error = f"Invalid endpoint name found."
+            if not silent:
+                click.secho(error, err=True, fg="red")
+                return
+            else:
+                raise ConfigureNetworkError(error)
+
+        if not isinstance(con, dict):
+            error = f"Entry '{name}' in {ConfigFields.CONNECT_TO} must be a dictionary, but found {con.__class__.__name__}."
+            if not silent:
+                click.secho(error, err=True, fg="red")
+                return
+            else:
+                raise ConfigureNetworkError(error)
+
+        if ConfigFields.PEER_TYPE not in con:
+            error = f"Endpoint '{name}' {ConfigFields.PEER_TYPE} must be present."
+            if not silent:
+                click.secho(error, err=True, fg="red")
+                return
+            else:
+                raise ConfigureNetworkError(error)
+
+        if con[ConfigFields.PEER_TYPE] not in ALLOWED_PEER_TYPES:
+            error = f"Endpoint '{name}' {ConfigFields.PEER_TYPE} '{con[ConfigFields.PEER_TYPE]}' is not allowed."
+            if not silent:
+                click.secho(error, err=True, fg="red")
+                return
+            else:
+                raise ConfigureNetworkError(error)
+
+        probably_an_id = False
+        try:
+            name_as_id = int(name)
+            probably_an_id = True
+        except ValueError:
+            name_as_id = name
+        if probably_an_id and con[ConfigFields.PEER_TYPE] == PeerType.ENDPOINT:
+            click.secho(
+                (
+                    f"Endpoint '{name}' {ConfigFields.PEER_TYPE} is {PeerType.ENDPOINT}, however, "
+                    f"it appears to be an {PeerType.ID}."
+                ),
+                err=True,
+                fg="yellow",
+            )
+        if not probably_an_id and con[ConfigFields.PEER_TYPE] == PeerType.ID:
+            error = (
+                f"Endpoint '{name}' {ConfigFields.PEER_TYPE} is {PeerType.ID}, however, "
+                f"it appears to be an {PeerType.ENDPOINT}."
+            )
+            if not silent:
+                click.secho(error, err=True, fg="red")
+                return
+            else:
+                raise ConfigureNetworkError(error)
+
+        if ConfigFields.ID in con:
+            try:
+                _ = int(con[ConfigFields.ID])
+                id_valid = True
+            except ValueError:
+                id_valid = False
+            if (
+                not isinstance(con[ConfigFields.ID], (str, int))
+                or not con[ConfigFields.ID]
+                or not id_valid
+            ):
+                error = f"Endpoint '{name}' {ConfigFields.ID} is invalid."
+                if not silent:
+                    click.secho(error, err=True, fg="red")
+                    return False
+                else:
+                    raise ConfigureNetworkError(error)
+
+            if (
+                con[ConfigFields.PEER_TYPE] == PeerType.ID
+                and int(con[ConfigFields.ID]) != name_as_id
+            ):
+                error = f"Endpoint '{name}' {ConfigFields.ID} field does not match endpoint id."
+                if not silent:
+                    click.secho(error, err=True, fg="red")
+                    return False
+                else:
+                    raise ConfigureNetworkError(error)
+
+        if ConfigFields.SERVICES in con:
+            if not isinstance(con[ConfigFields.SERVICES], (list, tuple)):
+                error = (
+                    f"Endpoint '{name}' {ConfigFields.SERVICES} must be a "
+                    f"list, but found {con[ConfigFields.SERVICES].__class__.__name__}."
+                )
+                if not silent:
+                    click.secho(error, err=True, fg="red")
+                    return
+                else:
+                    raise ConfigureNetworkError(error)
+
+            for service in con[ConfigFields.SERVICES]:
+                if not isinstance(service, (str, int)):
+                    error = (
+                        f"Endpoint '{name}' service must be a string"
+                        f", but found {service.__class__.__name__}."
+                    )
+                    if not silent:
+                        click.secho(error, err=True, fg="red")
+                        return
+                    else:
+                        raise ConfigureNetworkError(error)
+
+        if ConfigFields.CONNECT_TO in con:
+            if not validate_connections(
+                con[ConfigFields.CONNECT_TO], silent, level + 1
+            ):
+                return False
+
+    return True
+
+
 def resolve_p2p_connections(api, connections, silent=False):
     """Resolves configuration connections for Point to Point topology.
 
@@ -204,7 +350,7 @@ def expand_agents_tags(api, dst_dict, silent=False):
 
     Args:
         api (PlatformApi): API object to communicate with the platform.
-        dst_dict ([type]): [description]
+        dst_dict (dict): Connections dictionary that contain tags as endpoints.
         silent (bool, optional): Indicates whether to suppress messages - used with Ansible. Defaults to False.
 
     Raises:

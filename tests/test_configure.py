@@ -3,7 +3,7 @@ from unittest import mock
 import pytest
 import syntropy_sdk as sdk
 
-from syntropynac import configure, resolve, transform
+from syntropynac import configure, exceptions, resolve, transform
 
 
 @pytest.fixture
@@ -12,6 +12,14 @@ def config_mock():
         "syntropynac.configure.configure_connections",
         autospec=True,
         return_value=(1, 3),
+    ) as the_mock:
+        yield the_mock
+
+
+@pytest.fixture
+def validate_connections_mock():
+    with mock.patch(
+        "syntropynac.resolve.validate_connections", autospec=True, return_value=True
     ) as the_mock:
         yield the_mock
 
@@ -187,7 +195,17 @@ def test_configure_connection(
     )
 
 
-def test_configure_network__create(api):
+def test_configure_network__validation_fail(api, validate_connections_mock):
+    config = {"name": "test", "state": "present", "connections": {"a": {}, "b": {}}}
+    validate_connections_mock.return_value = False
+    with pytest.raises(exceptions.ConfigureNetworkError):
+        configure.configure_network(api, config, "False", silent="silent")
+    validate_connections_mock.assert_called_once_with(
+        config["connections"], silent="silent"
+    )
+
+
+def test_configure_network__create(api, validate_connections_mock):
     config = {"name": "test", "state": "present"}
     with mock.patch(
         "syntropynac.configure.configure_network_create",
@@ -199,9 +217,10 @@ def test_configure_network__create(api):
             == "changed"
         )
         the_mock.assert_called_once_with(api, config, "False", silent="silent")
+        validate_connections_mock.assert_called_once_with({}, silent="silent")
 
 
-def test_configure_network__delete(api):
+def test_configure_network__delete(api, validate_connections_mock):
     config = {"name": "test2", "state": "absent"}
     with mock.patch(
         "syntropynac.configure.configure_network_delete",
@@ -224,9 +243,10 @@ def test_configure_network__delete(api):
             "False",
             silent="silent",
         )
+        validate_connections_mock.assert_called_once_with({}, silent="silent")
 
 
-def test_configure_network__update(networks, api):
+def test_configure_network__update(networks, api, validate_connections_mock):
     config = {"name": "test2", "state": "present"}
     with mock.patch(
         "syntropynac.configure.configure_network_update",
@@ -244,6 +264,7 @@ def test_configure_network__update(networks, api):
             "False",
             silent="silent",
         )
+        validate_connections_mock.assert_called_once_with({}, silent="silent")
 
 
 def test_create_network__dry_run(api):
