@@ -181,7 +181,7 @@ def validate_connections(connections, silent=False, level=0):
             error = f"Invalid endpoint name found."
             if not silent:
                 click.secho(error, err=True, fg="red")
-                return
+                return False
             else:
                 raise ConfigureNetworkError(error)
 
@@ -189,7 +189,7 @@ def validate_connections(connections, silent=False, level=0):
             error = f"Entry '{name}' in {ConfigFields.CONNECT_TO} must be a dictionary, but found {con.__class__.__name__}."
             if not silent:
                 click.secho(error, err=True, fg="red")
-                return
+                return False
             else:
                 raise ConfigureNetworkError(error)
 
@@ -197,7 +197,7 @@ def validate_connections(connections, silent=False, level=0):
             error = f"Endpoint '{name}' {ConfigFields.PEER_TYPE} must be present."
             if not silent:
                 click.secho(error, err=True, fg="red")
-                return
+                return False
             else:
                 raise ConfigureNetworkError(error)
 
@@ -205,7 +205,7 @@ def validate_connections(connections, silent=False, level=0):
             error = f"Endpoint '{name}' {ConfigFields.PEER_TYPE} '{con[ConfigFields.PEER_TYPE]}' is not allowed."
             if not silent:
                 click.secho(error, err=True, fg="red")
-                return
+                return False
             else:
                 raise ConfigureNetworkError(error)
 
@@ -231,7 +231,7 @@ def validate_connections(connections, silent=False, level=0):
             )
             if not silent:
                 click.secho(error, err=True, fg="red")
-                return
+                return False
             else:
                 raise ConfigureNetworkError(error)
 
@@ -272,7 +272,7 @@ def validate_connections(connections, silent=False, level=0):
                 )
                 if not silent:
                     click.secho(error, err=True, fg="red")
-                    return
+                    return False
                 else:
                     raise ConfigureNetworkError(error)
 
@@ -284,7 +284,7 @@ def validate_connections(connections, silent=False, level=0):
                     )
                     if not silent:
                         click.secho(error, err=True, fg="red")
-                        return
+                        return False
                     else:
                         raise ConfigureNetworkError(error)
 
