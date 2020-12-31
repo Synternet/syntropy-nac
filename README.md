@@ -4,6 +4,8 @@
 # Syntropy NAC
 Syntropy Network As Code library and command line utility. 
 
+More information can be found at https://docs.syntropystack.com/docs/network-as-code
+
 ## Requirements.
 
 Python 3.6+
