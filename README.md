@@ -69,6 +69,8 @@ It is possible to export existing networks using `syntropynac export-networks` c
 in a YAML format.
 This configuration can be passed to `syntropynac configure-networks {infrastructure.yaml}` to create networks and connections.
 
+Note, however, that `export-networks` command will export `connections`(if any) as well as `endpoints`. The exported `endpoints` represent the endpoints without connections along with their services and tags. Those `endpoints` are ignored by the `configure-networks` command.
+
 Below you can find a sample configuration file for different types of networks:
 
 ```yaml
@@ -79,7 +81,6 @@ name: interconnect
 topology: p2p
 # Network state is mandatory. Values: present, absent
 state: present
-use_sdn: false
 # Connections to create
 connections:
   # Endpoint can be refferred to by name and by id
@@ -115,7 +116,6 @@ connections:
 # Connect mqtt server with iot devices 
 name: iot-network
 state: present
-use_sdn: false
 topology: p2m
 connections:
   mqtt-server-name.com:
@@ -130,7 +130,6 @@ connections:
 # Create DNS servers mesh network 
 name: dns-mesh
 state: present
-use_sdn: true
 topology: mesh
 connections:
   # Will create a mesh network using endpoints tagged as "dns-servers"
