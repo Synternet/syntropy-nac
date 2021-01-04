@@ -63,12 +63,22 @@ def configure_networks(config, network, dry_run, from_json, platform):
                         services:
                         - app
     """
-    with open(config, "rb") as cfg_file:
-        if from_json:
-            config = json.load(cfg_file)
-            config = config if isinstance(config, list) else [config]
-        else:
-            config = list(yaml.safe_load_all(cfg_file))
+    try:
+        with open(config, "rb") as cfg_file:
+            if from_json:
+                config = json.load(cfg_file)
+                config = config if isinstance(config, list) else [config]
+            else:
+                config = list(yaml.safe_load_all(cfg_file))
+    except FileNotFoundError:
+        click.secho(f"Could not find {config} file.", err=True, fg="red")
+        return
+    except json.decoder.JSONDecodeError:
+        click.secho(f"Could not parse {config} file as JSON.", err=True, fg="red")
+        return
+    except yaml.YAMLError:
+        click.secho(f"Could not parse {config} file as YAML.", err=True, fg="red")
+        return
 
     for index, net in enumerate(config):
         if any(i not in net for i in ("name", "topology", "state")):
