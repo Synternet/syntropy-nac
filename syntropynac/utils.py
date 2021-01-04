@@ -85,6 +85,10 @@ def export_network(api, all_agents, network, topology):
                 fields.ConfigFields.SERVICES: [
                     service["agent_service_name"] for service in agent_services[id]
                 ],
+                fields.ConfigFields.TAGS: [
+                    tag["agent_tag_name"]
+                    for tag in all_agents[id].get("agent_tags", [])
+                ],
             }
             for id in unused_endpoints
         }
