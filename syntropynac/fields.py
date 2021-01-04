@@ -1,30 +1,31 @@
 class PeerState:
-    PRESENT = "present"
     ABSENT = "absent"
+    PRESENT = "present"
 
 
 class PeerType:
     ENDPOINT = "endpoint"
-    TAG = "tag"
     ID = "id"
+    TAG = "tag"
 
 
 class ConfigFields:
-    ID = "id"
-    NAME = "name"
-    STATE = "state"
-    SERVICES = "services"
-    TOPOLOGY = "topology"
-    CONNECT_TO = "connect_to"
     CONNECTIONS = "connections"
-    PEER_TYPE = "type"
-    USE_SDN = "use_sdn"
-    IGNORE_NETWORK_TOPOLOGY = "ignore_configured_topology"
+    CONNECT_TO = "connect_to"
     ENDPOINTS = "endpoints"
+    ID = "id"
+    IGNORE_NETWORK_TOPOLOGY = "ignore_configured_topology"
+    NAME = "name"
+    PEER_TYPE = "type"
+    SERVICES = "services"
+    STATE = "state"
+    TAGS = "tags"
+    TOPOLOGY = "topology"
+    USE_SDN = "use_sdn"
 
 
 ALLOWED_PEER_TYPES = (
     PeerType.ENDPOINT,
-    PeerType.TAG,
     PeerType.ID,
+    PeerType.TAG,
 )
