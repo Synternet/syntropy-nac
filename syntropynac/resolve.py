@@ -235,7 +235,7 @@ def validate_connections(connections, silent=False, level=0):
             else:
                 raise ConfigureNetworkError(error)
 
-        if ConfigFields.ID in con:
+        if ConfigFields.ID in con and con[ConfigFields.ID] is not None:
             try:
                 _ = int(con[ConfigFields.ID])
                 id_valid = True

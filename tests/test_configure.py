@@ -206,7 +206,7 @@ def test_configure_network__validation_fail(api, validate_connections_mock):
 
 
 def test_configure_network__create(api, validate_connections_mock):
-    config = {"name": "test", "state": "present"}
+    config = {"name": "test", "id": None, "state": "present"}
     with mock.patch(
         "syntropynac.configure.configure_network_create",
         autospec=True,
@@ -403,11 +403,13 @@ def test_create_network__p2m(api, config_mock):
 def test_create_network__mesh(api, config_mock):
     config = {
         "name": "test",
+        "id": None,
         "topology": "mesh",
         "state": "present",
         "connections": {
             "agent-2": {
                 "type": "endpoint",
+                "id": None,
             },
             "agent-4": {
                 "type": "endpoint",
@@ -445,6 +447,30 @@ def test_create_network__mesh(api, config_mock):
                 }
             )
         ]
+
+
+def test_create_network__mesh__fail_with_id(api, config_mock):
+    config = {
+        "name": "test",
+        "id": 123,
+        "topology": "mesh",
+        "state": "present",
+        "connections": {
+            "agent-2": {
+                "type": "endpoint",
+            },
+            "agent-4": {
+                "type": "endpoint",
+            },
+            "agent-3": {
+                "type": "endpoint",
+            },
+        },
+    }
+    with pytest.raises(exceptions.ConfigureNetworkError):
+        configure.configure_network_create(api, config, False, silent=True)
+    assert api.platform_network_create.call_count == 0
+    assert api.platform_connection_create.call_count == 0
 
 
 def test_delete_network__dry_run(networks, api):

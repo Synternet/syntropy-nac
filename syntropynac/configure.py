@@ -176,6 +176,14 @@ def configure_network_create(api, config, dry_run, silent=False):
     topology = config[ConfigFields.TOPOLOGY].upper()
     connections = config.get(ConfigFields.CONNECTIONS, {})
 
+    if config.get(ConfigFields.ID) is not None:
+        error = f"Network ID during creation is not allowed."
+        if not silent:
+            click.secho(error, err=True, fg="red")
+            return False
+        else:
+            raise ConfigureNetworkError(error)
+
     if topology not in utils.ALLOWED_NETWORK_TOPOLOGIES:
         error = f"Network topology {topology} is not allowed."
         if not silent:
@@ -495,8 +503,8 @@ def configure_network(api, config, dry_run, silent=False):
             raise ConfigureNetworkError(error)
         return False
 
-    name = config[ConfigFields.NAME]
     id = config.get(ConfigFields.ID)
+    name = config[ConfigFields.NAME]
     state = config[ConfigFields.STATE]
     if state not in (PeerState.PRESENT, PeerState.ABSENT):
         error = f"Invalid network {name} {id if id else ''} state {state}"
@@ -506,7 +514,7 @@ def configure_network(api, config, dry_run, silent=False):
         else:
             raise ConfigureNetworkError(error)
 
-    if not isinstance(name, (str, int)) or not name:
+    if (not isinstance(name, str) or not name) or not isinstance(name, (int, str)):
         error = f"Invalid network name."
         if not silent:
             click.secho(error, fg="red", err=True)
@@ -514,7 +522,11 @@ def configure_network(api, config, dry_run, silent=False):
         else:
             raise ConfigureNetworkError(error)
 
-    if ConfigFields.ID in config and (not isinstance(id, int) or not id):
+    if (
+        id is not None
+        and ConfigFields.ID in config
+        and (not isinstance(id, int) or id <= 0)
+    ):
         error = f"Invalid network id."
         if not silent:
             click.secho(error, fg="red", err=True)

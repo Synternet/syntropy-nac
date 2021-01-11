@@ -152,6 +152,7 @@ def test_validate_connections__fail_ansible(connections):
         {13: {"type": "id", "id": "13"}},
         {"13": {"type": "id", "id": 13}},
         {"a": {"type": "endpoint"}},
+        {"a": {"type": "endpoint", "id": None}},
         {"a": {"type": "tag"}},
         {"12": {"type": "id", "connect_to": {"1": {"type": "id"}}}},
         {"1": {"type": "id", "connect_to": {"b": {"type": "endpoint"}}}},
