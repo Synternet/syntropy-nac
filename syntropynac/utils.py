@@ -42,7 +42,6 @@ def export_network(api, all_agents, network, topology):
             ),
         }
         for connection in connections
-        if connection["network"]["network_id"] == net["id"]
     ]
     transformed_connections = transform.transform_connections(
         all_agents,

@@ -77,9 +77,15 @@ def test_export_networks(
     runner,
     index_networks,
     p2p_connections,
-    platform_agent_index_ex,
+    platform_agent_index_stub,
     p2p_connection_services,
 ):
+    def agents(*args, **kwargs):
+        result = platform_agent_index_stub(*args, **kwargs)
+        for agent in result["data"]:
+            agent["networks"] = []
+        return result
+
     with mock.patch.object(
         sdk.PlatformApi,
         "platform_network_index",
@@ -94,7 +100,7 @@ def test_export_networks(
         sdk.PlatformApi,
         "platform_agent_index",
         autospec=True,
-        return_value=platform_agent_index_ex,
+        side_effect=agents,
     ) as index_ag, mock.patch.object(
         sdk.PlatformApi,
         "platform_connection_service_show",
@@ -102,6 +108,7 @@ def test_export_networks(
         return_value={"data": p2p_connection_services},
     ) as services_mock:
         result = runner.invoke(ctl.export_networks)
+        print(result.exc_info)
         assert "skip" in result.output
         assert "test" in result.output
         assert "nats-streaming" in result.output
