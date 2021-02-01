@@ -58,57 +58,75 @@ def networks():
 
 
 @pytest.fixture
-def connections():
-    return [
-        {
-            "agent_connection_id": 0,
-            "network": {"network_id": 1},
-            "agent_1": {"agent_id": 1, "agent_name": "agent1"},
-            "agent_2": {"agent_id": 2, "agent_name": "agent2"},
-        },
-        {
-            "agent_connection_id": 1,
-            "network": {"network_id": 2},
-            "agent_1": {"agent_id": 1, "agent_name": "agent1"},
-            "agent_2": {"agent_id": 2, "agent_name": "agent2"},
-        },
-        {
-            "agent_connection_id": 2,
-            "network": {"network_id": 2},
-            "agent_1": {"agent_id": 3, "agent_name": "agent3"},
-            "agent_2": {"agent_id": 4, "agent_name": "agent4"},
-        },
-        {
-            "agent_connection_id": 3,
-            "network": {"network_id": 123},
-            "agent_1": {"agent_id": 123, "agent_name": "agent123"},
-            "agent_2": {"agent_id": 321, "agent_name": "agent321"},
-        },
-        {
-            "agent_connection_id": 4,
-            "network": {"network_id": 3},
-            "agent_1": {"agent_id": 1, "agent_name": "agent1"},
-            "agent_2": {"agent_id": 2, "agent_name": "agent2"},
-        },
-        {
-            "agent_connection_id": 5,
-            "network": {"network_id": 3},
-            "agent_1": {"agent_id": 3, "agent_name": "agent3"},
-            "agent_2": {"agent_id": 4, "agent_name": "agent4"},
-        },
-        {
-            "agent_connection_id": 6,
-            "network": {"network_id": 3},
-            "agent_1": {"agent_id": 2, "agent_name": "agent2"},
-            "agent_2": {"agent_id": 3, "agent_name": "agent3"},
-        },
-    ]
+def connections_stub():
+    def stub(*args, **kwargs):
+        connections = [
+            {
+                "agent_connection_id": 0,
+                "network": {"network_id": 1},
+                "agent_1": {"agent_id": 1, "agent_name": "agent1"},
+                "agent_2": {"agent_id": 2, "agent_name": "agent2"},
+            },
+            {
+                "agent_connection_id": 1,
+                "network": {"network_id": 2},
+                "agent_1": {"agent_id": 1, "agent_name": "agent1"},
+                "agent_2": {"agent_id": 2, "agent_name": "agent2"},
+            },
+            {
+                "agent_connection_id": 2,
+                "network": {"network_id": 2},
+                "agent_1": {"agent_id": 3, "agent_name": "agent3"},
+                "agent_2": {"agent_id": 4, "agent_name": "agent4"},
+            },
+            {
+                "agent_connection_id": 3,
+                "network": {"network_id": 123},
+                "agent_1": {"agent_id": 123, "agent_name": "agent123"},
+                "agent_2": {"agent_id": 321, "agent_name": "agent321"},
+            },
+            {
+                "agent_connection_id": 4,
+                "network": {"network_id": 3},
+                "agent_1": {"agent_id": 1, "agent_name": "agent1"},
+                "agent_2": {"agent_id": 2, "agent_name": "agent2"},
+            },
+            {
+                "agent_connection_id": 5,
+                "network": {"network_id": 3},
+                "agent_1": {"agent_id": 3, "agent_name": "agent3"},
+                "agent_2": {"agent_id": 4, "agent_name": "agent4"},
+            },
+            {
+                "agent_connection_id": 6,
+                "network": {"network_id": 3},
+                "agent_1": {"agent_id": 2, "agent_name": "agent2"},
+                "agent_2": {"agent_id": 3, "agent_name": "agent3"},
+            },
+        ]
+
+        if "filter" in kwargs:
+            net = int(kwargs["filter"][len("networks[]:") :])
+            return {
+                "data": [
+                    {
+                        "agent_connection_id": i["agent_connection_id"],
+                        "agent_1": i["agent_1"],
+                        "agent_2": i["agent_2"],
+                    }
+                    for i in connections
+                    if i["network"]["network_id"] == net
+                ]
+            }
+        return {"data": connections}
+
+    return stub
 
 
 @pytest.fixture
 def api(
     networks,
-    connections,
+    connections_stub,
     created_connections,
     platform_agent_index_stub,
     connection_services_stub,
@@ -119,7 +137,7 @@ def api(
     )
     api.platform_connection_index = mock.Mock(
         spec=sdk.PlatformApi.platform_connection_index,
-        return_value={"data": connections},
+        side_effect=connections_stub,
     )
     api.platform_network_create = mock.Mock(
         spec=sdk.PlatformApi.platform_network_create,

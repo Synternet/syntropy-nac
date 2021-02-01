@@ -100,7 +100,6 @@ def p2p_connections():
     return [
         {
             "agent_connection_id": 1,
-            "network": {"network_id": 321},
             "agent_1": {
                 "agent_id": 1,
                 "agent_name": "de-hetzner-db01",
@@ -112,7 +111,6 @@ def p2p_connections():
         },
         {
             "agent_connection_id": 2,
-            "network": {"network_id": 321},
             "agent_1": {
                 "agent_id": 3,
                 "agent_name": "de-aws-lb01",
@@ -130,7 +128,6 @@ def p2m_connections():
     return [
         {
             "agent_connection_id": 3,
-            "network": {"network_id": 123},
             "agent_1": {
                 "agent_id": 1,
                 "agent_name": "auto gen 1",
@@ -142,7 +139,6 @@ def p2m_connections():
         },
         {
             "agent_connection_id": 4,
-            "network": {"network_id": 123},
             "agent_1": {
                 "agent_id": 1,
                 "agent_name": "auto gen 1",
@@ -154,7 +150,6 @@ def p2m_connections():
         },
         {
             "agent_connection_id": 5,
-            "network": {"network_id": 123},
             "agent_1": {
                 "agent_id": 1,
                 "agent_name": "auto gen 1",
@@ -172,7 +167,6 @@ def mesh_connections():
     return [
         {
             "agent_connection_id": 6,
-            "network": {"network_id": 456},
             "agent_1": {
                 "agent_id": 13,
                 "agent_name": "iot_mqtt",
@@ -184,7 +178,6 @@ def mesh_connections():
         },
         {
             "agent_connection_id": 7,
-            "network": {"network_id": 456},
             "agent_1": {
                 "agent_id": 13,
                 "agent_name": "iot_mqtt",
@@ -196,7 +189,6 @@ def mesh_connections():
         },
         {
             "agent_connection_id": 8,
-            "network": {"network_id": 456},
             "agent_1": {
                 "agent_id": 13,
                 "agent_name": "iot_mqtt",
@@ -208,7 +200,6 @@ def mesh_connections():
         },
         {
             "agent_connection_id": 9,
-            "network": {"network_id": 456},
             "agent_1": {
                 "agent_id": 13,
                 "agent_name": "iot_mqtt",
@@ -220,7 +211,6 @@ def mesh_connections():
         },
         {
             "agent_connection_id": 10,
-            "network": {"network_id": 456},
             "agent_1": {
                 "agent_id": 10,
                 "agent_name": "iot_device1",
@@ -238,7 +228,6 @@ def created_connections():
     return [
         {
             "agent_connection_id": 10,
-            "network": {"network_id": 321},
             "agent_1": {
                 "agent_id": 13,
                 "agent_name": "iot_mqtt",
@@ -250,7 +239,6 @@ def created_connections():
         },
         {
             "agent_connection_id": 7,
-            "network": {"network_id": 321},
             "agent_1": {
                 "agent_id": 13,
                 "agent_name": "iot_mqtt",
@@ -262,7 +250,6 @@ def created_connections():
         },
         {
             "agent_connection_id": 8,
-            "network": {"network_id": 321},
             "agent_1": {
                 "agent_id": 13,
                 "agent_name": "iot_mqtt",

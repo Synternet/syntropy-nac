@@ -304,8 +304,6 @@ def configure_network_delete(api, network, dry_run, silent=False):
         filter=f"networks[]:{network['id']}", take=utils.TAKE_MAX_ITEMS_PER_CALL
     )
     for connection in connections["data"]:
-        if connection["network"]["network_id"] != network["id"]:
-            continue
         if dry_run:
             not silent and click.echo(
                 f"Would delete connection {connection['agent_connection_id']}..."
@@ -381,12 +379,6 @@ def configure_network_update(api, network, config, dry_run, silent=False):
         filter=f"networks[]:{network[ConfigFields.ID]}",
         take=utils.TAKE_MAX_ITEMS_PER_CALL,
     )["data"]
-    # NOTE: This is required due to the way tests are designed. Tests should be refactored.
-    connections = [
-        connection
-        for connection in connections
-        if connection["network"]["network_id"] == network[ConfigFields.ID]
-    ]
     all_agents = resolve.get_all_agents(api, silent)
     resolved_connections = transform.transform_connections(
         all_agents,
