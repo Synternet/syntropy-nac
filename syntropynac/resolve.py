@@ -138,15 +138,19 @@ def resolve_present_absent(agents, present, absent):
     services = [
         ConnectionServices.create(link, conn)
         for link, conn in zip(present_ids, present)
-        if link not in absent_ids and link[::-1] not in absent_ids
+        if link not in absent_ids
+        and link[::-1] not in absent_ids
+        and link[0] != link[1]
     ]
     return (
         [
             link
             for link in present_ids
-            if link not in absent_ids and link[::-1] not in absent_ids
+            if link not in absent_ids
+            and link[::-1] not in absent_ids
+            and link[0] != link[1]
         ],
-        absent_ids,
+        [i for i in absent_ids if i[0] != i[1]],
         services,
     )
 

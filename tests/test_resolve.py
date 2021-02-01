@@ -24,12 +24,16 @@ def test_resolve_present_absent(config_connections):
     agents = {f"agent {i}": i for i in range(5)}
     config_connections = list(config_connections.items())
     present = [
+        (config_connections[0], config_connections[0]),
         (config_connections[0], config_connections[1]),
         (config_connections[0], config_connections[2]),
+        (config_connections[2], config_connections[2]),
         (config_connections[3], config_connections[4]),
     ]
     absent = [
         (config_connections[0], config_connections[2]),
+        (config_connections[1], config_connections[1]),
+        (config_connections[3], config_connections[3]),
     ]
     assert resolve.resolve_present_absent(agents, present, absent) == (
         [[0, 1], [3, 4]],
