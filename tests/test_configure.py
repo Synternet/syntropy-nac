@@ -352,7 +352,7 @@ def test_create_network__p2p(api, config_mock):
                         "network_created_by": "CONFIG",
                         "network_type": "P2P",
                     },
-                }
+                },
             )
         ]
         assert api.platform_connection_create.call_args_list == [
@@ -361,7 +361,8 @@ def test_create_network__p2p(api, config_mock):
                     "network_id": 321,
                     "agent_ids": [[1, 2], [3, 4]],
                     "network_update_by": "CONFIG",
-                }
+                },
+                update_type=sdk.UpdateType.APPEND_NEW,
             )
         ]
 
@@ -413,7 +414,8 @@ def test_create_network__p2m(api, config_mock):
                     "network_id": 321,
                     "agent_ids": [[1, 2], [3, 4]],
                     "network_update_by": "CONFIG",
-                }
+                },
+                update_type=sdk.UpdateType.APPEND_NEW,
             )
         ]
 
@@ -462,7 +464,8 @@ def test_create_network__mesh(api, config_mock):
                     "network_id": 321,
                     "agent_ids": [[1, 2], [1, 4], [2, 4]],
                     "network_update_by": "CONFIG",
-                }
+                },
+                update_type=sdk.UpdateType.APPEND_NEW,
             )
         ]
 

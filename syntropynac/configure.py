@@ -275,7 +275,7 @@ def configure_network_create(api, config, dry_run, silent=False):
             api.platform_connection_create,
             translator=utils._default_translator("agent_ids"),
             max_payload_size=utils.MAX_PAYLOAD_SIZE,
-        )(body=body)["data"]
+        )(body=body, update_type=sdk.UpdateType.APPEND_NEW)["data"]
         not silent and click.echo(
             f"Created {len(connections)} connections for network {config[ConfigFields.NAME]}"
         )
