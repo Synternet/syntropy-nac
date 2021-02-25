@@ -63,7 +63,6 @@ def api(
             {
                 "network_name": "test",
                 "network_id": 321,
-                "network_type": "POINT_TO_POINT",
                 "network_disable_sdn_connections": False,
                 "network_metadata": {
                     "network_type": "P2P",
@@ -152,7 +151,6 @@ def api(
             {
                 "network_name": "test",
                 "network_id": 123,
-                "network_type": "POINT_TO_POINT",
                 "network_disable_sdn_connections": False,
                 "network_metadata": {
                     "network_type": "MESH",
@@ -239,76 +237,10 @@ def api(
             {
                 "network_name": "test",
                 "network_id": 456,
-                "network_type": "MESH",
                 "network_disable_sdn_connections": False,
-            },
-            None,
-            {
-                "connections": {
-                    "auto gen 10": {
-                        "id": 10,
-                        "services": [],
-                        "state": "present",
-                        "type": "endpoint",
-                    },
-                    "auto gen 11": {
-                        "id": 11,
-                        "services": [],
-                        "state": "present",
-                        "type": "endpoint",
-                    },
-                    "auto gen 12": {
-                        "id": 12,
-                        "services": [],
-                        "state": "present",
-                        "type": "endpoint",
-                    },
-                    "auto gen 13": {
-                        "id": 13,
-                        "services": [],
-                        "state": "present",
-                        "type": "endpoint",
-                    },
+                "network_metadata": {
+                    "network_type": "MESH",
                 },
-                "endpoints": {
-                    "auto gen 0": {"id": 0, "services": ["nginx", "redis"], "tags": []},
-                    "auto gen 1": {"id": 1, "services": ["nginx", "redis"], "tags": []},
-                    "auto gen 14": {
-                        "id": 14,
-                        "services": ["nginx", "redis"],
-                        "tags": [],
-                    },
-                    "auto gen 15": {
-                        "id": 15,
-                        "services": ["nginx", "redis"],
-                        "tags": [],
-                    },
-                    "auto gen 16": {
-                        "id": 16,
-                        "services": ["nginx", "redis"],
-                        "tags": [],
-                    },
-                    "auto gen 2": {"id": 2, "services": ["nginx", "redis"], "tags": []},
-                    "auto gen 3": {"id": 3, "services": ["nginx", "redis"], "tags": []},
-                    "auto gen 4": {"id": 4, "services": ["nginx", "redis"], "tags": []},
-                    "auto gen 5": {"id": 5, "services": ["nginx", "redis"], "tags": []},
-                    "auto gen 6": {"id": 6, "services": ["nginx", "redis"], "tags": []},
-                    "auto gen 7": {"id": 7, "services": ["nginx", "redis"], "tags": []},
-                    "auto gen 8": {"id": 8, "services": ["nginx", "redis"], "tags": []},
-                    "auto gen 9": {"id": 9, "services": ["nginx", "redis"], "tags": []},
-                },
-                "id": 456,
-                "name": "test",
-                "state": "present",
-                "topology": "MESH",
-            },
-        ),
-        (
-            {
-                "network_name": "test",
-                "network_id": 456,
-                "network_type": "MESH",
-                "network_disable_sdn_connections": False,
             },
             "P2P",
             {

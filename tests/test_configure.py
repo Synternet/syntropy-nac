@@ -30,7 +30,6 @@ def networks():
         {
             "network_id": 1,
             "network_name": "test1",
-            "network_type": "POINT_TO_POINT",
             "network_disable_sdn_connections": False,
             "network_metadata": {
                 "network_type": "P2P",
@@ -39,7 +38,6 @@ def networks():
         {
             "network_id": 2,
             "network_name": "test2",
-            "network_type": "POINT_TO_POINT",
             "network_disable_sdn_connections": False,
             "network_metadata": {
                 "network_type": "P2M",
@@ -48,7 +46,6 @@ def networks():
         {
             "network_id": 3,
             "network_name": "test3",
-            "network_type": "POINT_TO_POINT",
             "network_disable_sdn_connections": False,
             "network_metadata": {
                 "network_type": "MESH",
@@ -346,7 +343,6 @@ def test_create_network__p2p(api, config_mock):
             mock.call(
                 body={
                     "network_name": "test",
-                    "network_type": "POINT_TO_POINT",
                     "network_disable_sdn_connections": True,
                     "network_metadata": {
                         "network_created_by": "CONFIG",
@@ -399,7 +395,6 @@ def test_create_network__p2m(api, config_mock):
             mock.call(
                 body={
                     "network_name": "test",
-                    "network_type": "POINT_TO_POINT",
                     "network_disable_sdn_connections": True,
                     "network_metadata": {
                         "network_created_by": "CONFIG",
@@ -449,7 +444,6 @@ def test_create_network__mesh(api, config_mock):
             mock.call(
                 body={
                     "network_name": "test",
-                    "network_type": "POINT_TO_POINT",
                     "network_disable_sdn_connections": True,
                     "network_metadata": {
                         "network_created_by": "CONFIG",

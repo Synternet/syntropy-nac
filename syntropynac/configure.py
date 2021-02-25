@@ -241,7 +241,6 @@ def configure_network_create(api, config, dry_run, silent=False):
 
     body = {
         "network_name": config[ConfigFields.NAME],
-        "network_type": sdk.NetworkType.POINT_TO_POINT,
         "network_disable_sdn_connections": not use_sdn,
         "network_metadata": {
             "network_created_by": sdk.NetworkGenesisType.CONFIG,

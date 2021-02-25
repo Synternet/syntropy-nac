@@ -70,7 +70,6 @@ def index_networks():
             {
                 "network_name": "skip",
                 "network_id": 321,
-                "network_type": "POINT_TO_POINT",
                 "network_disable_sdn_connections": False,
                 "network_metadata": {
                     "network_type": "P2P",
@@ -79,7 +78,6 @@ def index_networks():
             {
                 "network_name": "test",
                 "network_id": 123,
-                "network_type": "POINT_TO_POINT",
                 "network_disable_sdn_connections": False,
                 "network_metadata": {
                     "network_type": "MESH",
@@ -88,7 +86,6 @@ def index_networks():
             {
                 "network_name": "test",
                 "network_id": 456,
-                "network_type": "MESH",
                 "network_disable_sdn_connections": False,
             },
         ]

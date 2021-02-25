@@ -18,20 +18,10 @@ def transform_network(network, reference=None):
         dict: Transformed Network representation.
     """
     topology = network.get("network_metadata", {}).get("network_type", "").upper()
-    # NOTE: If the network was configured using the SDK or Ansible network_type will always be POINT_TO_POINT and
-    # topology information is saved in network_metadata.network_type, however, we still want to support
-    # networks created using network_type, thus this conversion.
-    if not topology:
-        # Topology not set in the metadata, inferring from network type.
-        topology = {
-            sdk.NetworkType.POINT_TO_POINT: sdk.MetadataNetworkType.P2P,
-            sdk.NetworkType.GATEWAY: sdk.MetadataNetworkType.P2M,
-            sdk.NetworkType.MESH: sdk.MetadataNetworkType.MESH,
-        }[network["network_type"]]
     return {
         ConfigFields.NAME: network["network_name"],
         ConfigFields.ID: network["network_id"],
-        ConfigFields.TOPOLOGY: topology,
+        ConfigFields.TOPOLOGY: topology if topology else sdk.MetadataNetworkType.P2P,
         ConfigFields.USE_SDN: not network["network_disable_sdn_connections"],
         ConfigFields.STATE: PeerState.PRESENT,
     }
