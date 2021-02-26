@@ -22,7 +22,7 @@ def transform_network(network, reference=None):
         ConfigFields.NAME: network["network_name"],
         ConfigFields.ID: network["network_id"],
         ConfigFields.TOPOLOGY: topology if topology else sdk.MetadataNetworkType.P2P,
-        ConfigFields.USE_SDN: not network["network_disable_sdn_connections"],
+        ConfigFields.USE_SDN: not network.get("network_disable_sdn_connections", True),
         ConfigFields.STATE: PeerState.PRESENT,
     }
 
