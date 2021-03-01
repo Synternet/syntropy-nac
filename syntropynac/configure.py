@@ -14,6 +14,7 @@ def create_connections(api, network_id, network_name, peers, silent=False):
         "network_update_by": sdk.NetworkGenesisType.CONFIG,
     }
 
+    # FIXME: Change to a different api call after next release. This one is deprecated.
     utils.BatchedRequest(
         api.platform_connection_create,
         translator=utils._default_translator("agent_ids"),
