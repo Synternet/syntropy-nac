@@ -163,6 +163,38 @@ def api(
     return api
 
 
+def test_create_connections(api, created_connections):
+    api.platform_connection_index.side_effect = lambda *args, **kwargs: {
+        "data": created_connections
+    }
+
+    result = configure.create_connections(
+        api, 123, "name123", [(13, 11), (14, 13)], True
+    )
+    assert api.platform_connection_create.call_args_list == [
+        mock.call(
+            body={
+                "network_id": 123,
+                "agent_ids": [(13, 11), (14, 13)],
+                "network_update_by": sdk.NetworkGenesisType.CONFIG,
+            },
+            update_type=sdk.UpdateType.APPEND_NEW,
+        ),
+    ]
+    assert result == [
+        {
+            "agent_1": {"agent_id": 13, "agent_name": "iot_mqtt"},
+            "agent_2": {"agent_id": 11, "agent_name": "iot_device2"},
+            "agent_connection_id": 7,
+        },
+        {
+            "agent_1": {"agent_id": 13, "agent_name": "iot_mqtt"},
+            "agent_2": {"agent_id": 14, "agent_name": "iot_device2"},
+            "agent_connection_id": 8,
+        },
+    ]
+
+
 @pytest.mark.parametrize(
     "config, result",
     [
@@ -566,7 +598,7 @@ def test_update_network__p2p(api, networks, config_mock):
         )
         == True
     )
-    assert api.platform_connection_index.call_count == 1
+    assert api.platform_connection_index.call_count == 2
     assert api.platform_network_create.call_count == 0
     assert api.platform_connection_destroy.call_args_list == [
         mock.call(0),
@@ -633,7 +665,7 @@ def test_update_network__p2m(api, networks, config_mock):
         )
         == True
     )
-    assert api.platform_connection_index.call_count == 1
+    assert api.platform_connection_index.call_count == 2
     assert api.platform_network_create.call_count == 0
     assert api.platform_connection_destroy.call_args_list == [
         mock.call(1),
@@ -708,7 +740,7 @@ def test_update_network__mesh(api, networks, config_mock):
         )
         == True
     )
-    assert api.platform_connection_index.call_count == 1
+    assert api.platform_connection_index.call_count == 2
     assert api.platform_network_create.call_count == 0
     assert api.platform_connection_destroy.call_args_list == [
         mock.call(4),

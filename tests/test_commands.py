@@ -108,7 +108,6 @@ def test_export_networks(
         return_value={"data": p2p_connection_services},
     ) as services_mock:
         result = runner.invoke(ctl.export_networks)
-        print(result.exc_info)
         assert "skip" in result.output
         assert "test" in result.output
         assert "nats-streaming" in result.output

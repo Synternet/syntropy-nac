@@ -252,7 +252,7 @@ def created_connections():
                 "agent_name": "iot_mqtt",
             },
             "agent_2": {
-                "agent_id": 10,
+                "agent_id": 14,
                 "agent_name": "iot_device2",
             },
         },

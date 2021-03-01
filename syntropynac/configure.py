@@ -7,6 +7,39 @@ from syntropynac.exceptions import ConfigureNetworkError
 from syntropynac.fields import ConfigFields, PeerState
 
 
+def create_connections(api, network_id, network_name, peers, silent=False):
+    body = {
+        "network_id": network_id,
+        "agent_ids": peers,
+        "network_update_by": sdk.NetworkGenesisType.CONFIG,
+    }
+
+    utils.BatchedRequest(
+        api.platform_connection_create,
+        translator=utils._default_translator("agent_ids"),
+        max_payload_size=utils.MAX_PAYLOAD_SIZE,
+    )(body=body, update_type=sdk.UpdateType.APPEND_NEW)
+
+    connections = utils.WithRetry(api.platform_connection_index)(
+        filter=f"networks[]:{network_id}",
+        take=utils.TAKE_MAX_ITEMS_PER_CALL,
+    )["data"]
+
+    frozen_peers = [frozenset(peer) for peer in peers]
+    connections = [
+        con
+        for con in connections
+        if frozenset((con["agent_1"]["agent_id"], con["agent_2"]["agent_id"]))
+        in frozen_peers
+    ]
+
+    not silent and click.echo(
+        f"Created {len(connections)} connections for network {network_name}"
+    )
+
+    return connections
+
+
 def configure_connection(api, config, connection, silent=False):
     agents = {
         connection["agent_1"]["agent_id"]: connection["agent_1"],
@@ -259,25 +292,16 @@ def configure_network_create(api, config, dry_run, silent=False):
             f"Created network {config[ConfigFields.NAME]} with id {network_id}"
         )
 
-    body = {
-        "network_id": network_id,
-        "agent_ids": peers,
-        "network_update_by": sdk.NetworkGenesisType.CONFIG,
-    }
     if dry_run:
         not silent and click.echo(
             f"Would create {len(peers)} connections for network {config[ConfigFields.NAME]}"
         )
         return False
     else:
-        connections = utils.BatchedRequest(
-            api.platform_connection_create,
-            translator=utils._default_translator("agent_ids"),
-            max_payload_size=utils.MAX_PAYLOAD_SIZE,
-        )(body=body, update_type=sdk.UpdateType.APPEND_NEW)["data"]
-        not silent and click.echo(
-            f"Created {len(connections)} connections for network {config[ConfigFields.NAME]}"
+        connections = create_connections(
+            api, network_id, config[ConfigFields.NAME], peers, silent
         )
+
         updated_connections, updated_subnets = configure_connections(
             api, services, connections, silent=silent
         )
@@ -441,18 +465,8 @@ def configure_network_update(api, network, config, dry_run, silent=False):
     if dry_run:
         not silent and click.echo(f"Would create {len(to_add)} connections.")
     elif to_add:
-        body = {
-            "network_id": network["id"],
-            "agent_ids": to_add,
-            "network_update_by": sdk.NetworkGenesisType.CONFIG,
-        }
-        added_connections = utils.BatchedRequest(
-            api.platform_connection_create,
-            translator=utils._default_translator("agent_ids"),
-            max_payload_size=utils.MAX_PAYLOAD_SIZE,
-        )(body=body, update_type=sdk.UpdateType.APPEND_NEW)["data"]
-        not silent and click.echo(
-            f"Created {len(to_add)} connections for network {config[ConfigFields.NAME]}"
+        added_connections = create_connections(
+            api, network["id"], config[ConfigFields.NAME], to_add, silent
         )
 
     connections = [
