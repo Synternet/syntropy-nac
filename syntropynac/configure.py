@@ -7,19 +7,54 @@ from syntropynac.exceptions import ConfigureNetworkError
 from syntropynac.fields import ConfigFields, PeerState
 
 
+def get_topology(network, config, silent):
+    topology = config[ConfigFields.TOPOLOGY].upper()
+    if topology != network[ConfigFields.TOPOLOGY] and not config.get(
+        ConfigFields.IGNORE_NETWORK_TOPOLOGY, False
+    ):
+        error = f"Configured and requested network topologies do not match: {network[ConfigFields.TOPOLOGY]} v.s. {topology}."
+        if not silent:
+            click.secho(
+                error,
+                err=True,
+                fg="red",
+            )
+            return False
+        else:
+            raise ConfigureNetworkError(error)
+    elif topology != network[ConfigFields.TOPOLOGY] and config.get(
+        ConfigFields.IGNORE_NETWORK_TOPOLOGY, False
+    ):
+        click.secho(
+            (
+                f"Configured and requested network topologies do not match: "
+                f"{network[ConfigFields.TOPOLOGY]} v.s. {topology}. However, "
+                f"{ConfigFields.IGNORE_NETWORK_TOPOLOGY} is set."
+            ),
+            err=True,
+            fg="yellow",
+        )
+        if network[ConfigFields.TOPOLOGY] != sdk.MetadataNetworkType.P2P:
+            click.secho(
+                "NOTE: It is more practical to override P2P topologies.",
+                err=True,
+                fg="yellow",
+            )
+    return topology
+
+
 def create_connections(api, network_id, network_name, peers, silent=False):
     body = {
-        "network_id": network_id,
-        "agent_ids": peers,
+        "network_ids": [network_id],
+        "agent_ids": [{"agent_1_id": a, "agent_2_id": b} for a, b in peers],
         "network_update_by": sdk.NetworkGenesisType.CONFIG,
     }
 
-    # FIXME: Change to a different api call after next release. This one is deprecated.
     utils.BatchedRequest(
-        api.platform_connection_create,
+        api.platform_connection_create_p2p,
         translator=utils._default_translator("agent_ids"),
         max_payload_size=utils.MAX_PAYLOAD_SIZE,
-    )(body=body, update_type=sdk.UpdateType.APPEND_NEW)
+    )(body=body)
 
     connections = utils.WithRetry(api.platform_connection_index)(
         filter=f"networks[]:{network_id}",
@@ -39,6 +74,22 @@ def create_connections(api, network_id, network_name, peers, silent=False):
     )
 
     return connections
+
+
+def delete_connections(api, absent):
+    body = [
+        {
+            "agent_1_id": a,
+            "agent_2_id": b,
+        }
+        for a, b in absent
+    ]
+
+    utils.BatchedRequest(
+        api.platform_connection_destroy,
+        translator=lambda body, data: body[:] if data is None else data[:],
+        max_payload_size=utils.MAX_PAYLOAD_SIZE,
+    )(body=body)
 
 
 def configure_connection(api, config, connection, silent=False):
@@ -312,7 +363,7 @@ def configure_network_create(api, config, dry_run, silent=False):
         return True
 
 
-def configure_network_delete(api, network, dry_run, silent=False):
+def configure_network_delete(api, network, config, dry_run, silent=False):
     """Deletes existing network's connections and the network itself.
 
     Args:
@@ -324,28 +375,32 @@ def configure_network_delete(api, network, dry_run, silent=False):
     Returns:
         (bool): True if any changes were made and False otherwise
     """
-    connections = utils.WithRetry(api.platform_connection_index)(
-        filter=f"networks[]:{network['id']}", take=utils.TAKE_MAX_ITEMS_PER_CALL
-    )
-    for connection in connections["data"]:
-        if dry_run:
-            not silent and click.echo(
-                f"Would delete connection {connection['agent_connection_id']}..."
-            )
-        else:
-            utils.WithRetry(api.platform_connection_destroy)(
-                connection["agent_connection_id"]
-            )
-            not silent and click.echo(
-                f"Deleted connection {connection['agent_connection_id']}."
-            )
+    config_connections = config.get(ConfigFields.CONNECTIONS, {})
+    topology = get_topology(network, config, silent)
+
+    if topology == sdk.MetadataNetworkType.P2P:
+        _, absent, _ = resolve.resolve_p2p_connections(
+            api, config_connections, silent=silent
+        )
+    elif topology == sdk.MetadataNetworkType.P2M:
+        _, absent, _ = resolve.resolve_p2m_connections(
+            api, config_connections, silent=silent
+        )
+    else:
+        _, absent, _ = resolve.resolve_mesh_connections(
+            api, config_connections, silent=silent
+        )
 
     if dry_run:
+        not silent and click.echo(
+            f"Would delete {len(absent)} connections from network {network['name']} ({network['id']})..."
+        )
         not silent and click.echo(
             f"Would delete network {network['name']} ({network['id']})..."
         )
         return False
     else:
+        delete_connections(api, absent)
         utils.WithRetry(api.platform_network_destroy)(network["id"])
         not silent and click.echo(f"Deleted network {network['name']}")
         return True
@@ -366,38 +421,7 @@ def configure_network_update(api, network, config, dry_run, silent=False):
     Returns:
         (bool): True if any changes were made and False otherwise
     """
-    topology = config[ConfigFields.TOPOLOGY].upper()
-    if topology != network[ConfigFields.TOPOLOGY] and not config.get(
-        ConfigFields.IGNORE_NETWORK_TOPOLOGY, False
-    ):
-        error = f"Configured and requested network topologies do not match: {network[ConfigFields.TOPOLOGY]} v.s. {topology}."
-        if not silent:
-            click.secho(
-                error,
-                err=True,
-                fg="red",
-            )
-            return False
-        else:
-            raise ConfigureNetworkError(error)
-    elif topology != network[ConfigFields.TOPOLOGY] and config.get(
-        ConfigFields.IGNORE_NETWORK_TOPOLOGY, False
-    ):
-        click.secho(
-            (
-                f"Configured and requested network topologies do not match: "
-                f"{network[ConfigFields.TOPOLOGY]} v.s. {topology}. However, "
-                f"{ConfigFields.IGNORE_NETWORK_TOPOLOGY} is set."
-            ),
-            err=True,
-            fg="yellow",
-        )
-        if network[ConfigFields.TOPOLOGY] != sdk.MetadataNetworkType.P2P:
-            click.secho(
-                "NOTE: It is more practical to override P2P topologies.",
-                err=True,
-                fg="yellow",
-            )
+    topology = get_topology(network, config, silent)
 
     connections = utils.WithRetry(api.platform_connection_index)(
         filter=f"networks[]:{network[ConfigFields.ID]}",
@@ -449,18 +473,12 @@ def configure_network_update(api, network, config, dry_run, silent=False):
     current = [frozenset(i) for i in current]
 
     to_add = [list(link) for link in present if link not in current]
-    to_remove = [
-        conn["agent_connection_id"]
-        for link, conn in current_connections.items()
-        if link in absent
-    ]
 
-    for item in to_remove:
-        if dry_run:
-            not silent and click.echo(f"Would remove connection {item}.")
-        else:
-            utils.WithRetry(api.platform_connection_destroy)(item)
-            not silent and click.echo(f"Removed connection {item}.")
+    if dry_run:
+        not silent and click.echo(f"Would remove {len(absent)} connections.")
+    else:
+        delete_connections(api, absent)
+        not silent and click.echo(f"Removed {len(absent)} connections.")
 
     added_connections = []
     if dry_run:
@@ -470,6 +488,11 @@ def configure_network_update(api, network, config, dry_run, silent=False):
             api, network["id"], config[ConfigFields.NAME], to_add, silent
         )
 
+    to_remove = [
+        conn["agent_connection_id"]
+        for link, conn in current_connections.items()
+        if link in absent
+    ]
     connections = [
         connection
         for connection in connections + added_connections
@@ -571,7 +594,9 @@ def configure_network(api, config, dry_run, silent=False):
             api, networks[0], config, dry_run, silent=silent
         )
     elif len(networks) == 1 and state == PeerState.ABSENT:
-        return configure_network_delete(api, networks[0], dry_run, silent=silent)
+        return configure_network_delete(
+            api, networks[0], config, dry_run, silent=silent
+        )
     elif len(networks) > 1:
         not silent and click.secho(
             f"There are more than one network by the name {name}",
