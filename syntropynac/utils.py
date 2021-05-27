@@ -1,8 +1,28 @@
 from collections import defaultdict
 
 import syntropy_sdk as sdk
+from syntropy_sdk.utils import MAX_QUERY_FIELD_SIZE
 
 from syntropynac import fields, transform
+
+
+def get_network_connections(api, network):
+    connections_filter = f"networks[]:{network['id']}"
+    connections = sdk.utils.WithRetry(api.platform_connection_index)(
+        filter=connections_filter, take=sdk.utils.TAKE_MAX_ITEMS_PER_CALL
+    )["data"]
+    return connections
+
+
+def get_agents_connections(api, agents):
+    ids = list(agents.keys())
+    connections = sdk.utils.BatchedRequestFilter(
+        api.platform_connection_index,
+        max_query_size=MAX_QUERY_FIELD_SIZE,
+        filter_name="agent_ids",
+        filter_data=ids,
+    )(take=sdk.utils.TAKE_MAX_ITEMS_PER_CALL,)["data"]
+    return connections
 
 
 def export_network(api, all_agents, network, topology):
@@ -20,15 +40,18 @@ def export_network(api, all_agents, network, topology):
         dict: A network configuration structure.
     """
     net = transform.transform_network(network)
-    connections_filter = f"networks[]:{net['id']}"
-    connections = sdk.utils.WithRetry(api.platform_connection_index)(
-        filter=connections_filter, take=sdk.utils.TAKE_MAX_ITEMS_PER_CALL
-    )["data"]
+
+    connections = (
+        get_network_connections(api, net)
+        if network is not None
+        else get_agents_connections(api, all_agents)
+    )
+
     ids = [connection["agent_connection_id"] for connection in connections]
     if ids:
-        connections_services = sdk.utils.BatchedRequest(
+        connections_services = sdk.utils.BatchedRequestQuery(
             api.platform_connection_service_show,
-            max_payload_size=sdk.utils.MAX_QUERY_FIELD_SIZE,
+            max_query_size=sdk.utils.MAX_QUERY_FIELD_SIZE,
         )(ids)["data"]
         connection_services = {
             connection["agent_connection_id"]: connection
@@ -54,7 +77,10 @@ def export_network(api, all_agents, network, topology):
         if net[fields.ConfigFields.TOPOLOGY] != topology:
             net[fields.ConfigFields.IGNORE_NETWORK_TOPOLOGY] = True
         net[fields.ConfigFields.TOPOLOGY] = topology
-    del net[fields.ConfigFields.USE_SDN]
+
+    # NOTE: Currently, SDN is disabled.
+    if fields.ConfigFields.USE_SDN in net:
+        del net[fields.ConfigFields.USE_SDN]
 
     # Filter out unused endpoints
     used_endpoints = [
@@ -65,14 +91,15 @@ def export_network(api, all_agents, network, topology):
     net_endpoints = [
         agent["agent_id"]
         for id, agent in all_agents.items()
-        if any(net["network_id"] == network["network_id"] for net in agent["networks"])
+        if network is None
+        or any(net["network_id"] == network["network_id"] for net in agent["networks"])
     ]
     unused_endpoints = [id for id in net_endpoints if id not in used_endpoints]
 
     if unused_endpoints:
-        agents_services = sdk.utils.BatchedRequest(
+        agents_services = sdk.utils.BatchedRequestQuery(
             api.platform_agent_service_index,
-            max_payload_size=sdk.utils.MAX_QUERY_FIELD_SIZE,
+            max_query_size=sdk.utils.MAX_QUERY_FIELD_SIZE,
         )(unused_endpoints)["data"]
         agent_services = defaultdict(list)
         for agent in agents_services:

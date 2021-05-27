@@ -7,16 +7,29 @@ from syntropynac.exceptions import ConfigureNetworkError
 from syntropynac.fields import ConfigFields, PeerState, PeerType
 
 
+def transform_network_default():
+    return {
+        ConfigFields.NAME: "Syntropy Stack Account Network",
+        ConfigFields.TOPOLOGY: sdk.MetadataNetworkType.P2M,
+        ConfigFields.STATE: PeerState.PRESENT,
+    }
+
+
 def transform_network(network, reference=None):
     """Transforms NetworkObject into internal representation that is used either for export or configuration.
+    Returns a default network representation if network == None.
 
     Args:
-        network (NetworkObject): A Network to transform.
+        network (NetworkObject): A Network to transform. None represents the default network.
         reference (dict): A dictionary describing reference Network configuration.
 
     Returns:
         dict: Transformed Network representation.
     """
+
+    if network is None:
+        return transform_network_default()
+
     topology = network.get("network_metadata", {}).get("network_type", "").upper()
     return {
         ConfigFields.NAME: network["network_name"],

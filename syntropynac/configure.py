@@ -50,7 +50,7 @@ def create_connections(api, network_id, network_name, peers, silent=False):
         "network_update_by": sdk.NetworkGenesisType.CONFIG,
     }
 
-    utils.BatchedRequest(
+    utils.BatchedRequestBody(
         api.platform_connection_create_p2p,
         translator=utils._default_translator("agent_ids"),
         max_payload_size=utils.MAX_PAYLOAD_SIZE,
@@ -85,7 +85,7 @@ def delete_connections(api, absent):
         for a, b in absent
     ]
 
-    utils.BatchedRequest(
+    utils.BatchedRequestBody(
         api.platform_connection_destroy,
         translator=lambda body, data: body[:] if data is None else data[:],
         max_payload_size=utils.MAX_PAYLOAD_SIZE,
@@ -130,7 +130,7 @@ def configure_connection(api, config, connection, silent=False):
         "connectionId": connection["agent_connection_id"],
         "changes": changes,
     }
-    utils.BatchedRequest(
+    utils.BatchedRequestBody(
         api.platform_connection_service_update,
         max_payload_size=utils.MAX_PAYLOAD_SIZE,
         translator=utils._default_translator("changes"),
@@ -142,9 +142,9 @@ def configure_connections(api, services_config, connections, silent=False):
     ids = [connection["agent_connection_id"] for connection in connections]
     if not ids:
         return 0, 0
-    connections_services = utils.BatchedRequest(
+    connections_services = utils.BatchedRequestQuery(
         api.platform_connection_service_show,
-        max_payload_size=utils.MAX_QUERY_FIELD_SIZE,
+        max_query_size=utils.MAX_QUERY_FIELD_SIZE,
     )(ids)["data"]
 
     # Build a map of connections so that it would be quicker to resolve them to subnets

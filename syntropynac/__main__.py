@@ -108,8 +108,16 @@ def configure_networks(config, network, dry_run, from_json, platform):
     default=False,
     help="Outputs a JSON instead of YAML.",
 )
+@click.option(
+    "--global",
+    "-g",
+    "global_network",
+    is_flag=True,
+    default=False,
+    help="Retrieves global Syntropy Account network.",
+)
 @syntropy_platform
-def export_networks(network, skip, take, topology, to_json, platform):
+def export_networks(network, skip, take, global_network, topology, to_json, platform):
     """Exports existing networks to configuration YAML/JSON file.
 
     If the network was created via UI or manually with complex topology in order
@@ -129,13 +137,16 @@ def export_networks(network, skip, take, topology, to_json, platform):
             )
             return
 
-    networks = platform.platform_network_index(
-        filter=f"id|name:'{network}'" if network else None,
-        skip=skip,
-        take=take,
-    )["data"]
-    if not networks:
-        return
+    if not global_network:
+        networks = platform.platform_network_index(
+            filter=f"id|name:'{network}'" if network else None,
+            skip=skip,
+            take=take,
+        )["data"]
+        if not networks:
+            return
+    else:
+        networks = [None]
 
     all_agents = sdk.utils.WithRetry(platform.platform_agent_index)(
         take=sdk.utils.TAKE_MAX_ITEMS_PER_CALL

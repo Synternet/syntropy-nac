@@ -24,7 +24,7 @@ distlib==0.3.1
     # via virtualenv
 filelock==3.0.12
     # via virtualenv
-identify==2.2.5
+identify==2.2.6
     # via pre-commit
 iniconfig==1.1.1
     # via pytest
@@ -62,17 +62,17 @@ six==1.16.0
     #   python-dateutil
     #   syntropy-sdk
     #   virtualenv
-syntropy-sdk==0.1.7
+syntropy-sdk==0.1.8
     # via -r requirements.txt
 toml==0.10.2
     # via
     #   pre-commit
     #   pytest
-urllib3==1.26.4
+urllib3==1.26.5
     # via
     #   -r requirements.txt
     #   syntropy-sdk
-virtualenv==20.4.6
+virtualenv==20.4.7
     # via pre-commit
 
 # The following packages are considered to be unsafe in a requirements file:

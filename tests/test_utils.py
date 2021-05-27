@@ -22,6 +22,8 @@ def api(
             return {"data": p2m_connections}
         elif "456" in filter:
             return {"data": mesh_connections}
+        elif "agent_ids" in filter:
+            return {"data": p2m_connections}
         else:
             return None
 
@@ -331,6 +333,86 @@ def api(
                 "name": "test",
                 "state": "present",
                 "topology": "P2P",
+            },
+        ),
+        (
+            None,
+            None,
+            {
+                "connections": {
+                    "auto gen 1": {
+                        "connect_to": {
+                            "auto gen 4": {
+                                "id": 4,
+                                "services": [],
+                                "state": "present",
+                                "type": "endpoint",
+                            },
+                            "auto gen 5": {
+                                "id": 5,
+                                "services": [],
+                                "state": "present",
+                                "type": "endpoint",
+                            },
+                            "auto gen 6": {
+                                "id": 6,
+                                "services": [],
+                                "state": "present",
+                                "type": "endpoint",
+                            },
+                        },
+                        "id": 1,
+                        "services": [],
+                        "state": "present",
+                        "type": "endpoint",
+                    }
+                },
+                "endpoints": {
+                    "auto gen 0": {"id": 0, "services": ["nginx", "redis"], "tags": []},
+                    "auto gen 10": {
+                        "id": 10,
+                        "services": ["nginx", "redis"],
+                        "tags": [],
+                    },
+                    "auto gen 11": {
+                        "id": 11,
+                        "services": ["nginx", "redis"],
+                        "tags": [],
+                    },
+                    "auto gen 12": {
+                        "id": 12,
+                        "services": ["nginx", "redis"],
+                        "tags": [],
+                    },
+                    "auto gen 13": {
+                        "id": 13,
+                        "services": ["nginx", "redis"],
+                        "tags": [],
+                    },
+                    "auto gen 14": {
+                        "id": 14,
+                        "services": ["nginx", "redis"],
+                        "tags": [],
+                    },
+                    "auto gen 15": {
+                        "id": 15,
+                        "services": ["nginx", "redis"],
+                        "tags": [],
+                    },
+                    "auto gen 16": {
+                        "id": 16,
+                        "services": ["nginx", "redis"],
+                        "tags": [],
+                    },
+                    "auto gen 2": {"id": 2, "services": ["nginx", "redis"], "tags": []},
+                    "auto gen 3": {"id": 3, "services": ["nginx", "redis"], "tags": []},
+                    "auto gen 7": {"id": 7, "services": ["nginx", "redis"], "tags": []},
+                    "auto gen 8": {"id": 8, "services": ["nginx", "redis"], "tags": []},
+                    "auto gen 9": {"id": 9, "services": ["nginx", "redis"], "tags": []},
+                },
+                "name": "Syntropy Stack Account Network",
+                "state": "present",
+                "topology": "P2M",
             },
         ),
     ],
