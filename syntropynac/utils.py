@@ -25,28 +25,7 @@ def get_agents_connections(api, agents):
     return connections
 
 
-def export_network(api, all_agents, network, topology):
-    """Generate a network configuration structure from network and connections either
-    using specified topology or inferred topology.
-    Currently, default topology is P2M.
-
-    Args:
-        api (PlatformApi): Instance of PlatformApi.
-        all_agents (dict[int, dict]): A mapping of all user agents ids to agent objects.
-        network (dict): A dictionary describing a network to be exported.
-        topology (str): One of MetadataNetworkType.
-
-    Returns:
-        dict: A network configuration structure.
-    """
-    net = transform.transform_network(network)
-
-    connections = (
-        get_network_connections(api, net)
-        if network is not None
-        else get_agents_connections(api, all_agents)
-    )
-
+def export_connections(api, all_agents, network, connections, topology):
     ids = [connection["agent_connection_id"] for connection in connections]
     if ids:
         connections_services = sdk.utils.BatchedRequestQuery(
@@ -69,18 +48,18 @@ def export_network(api, all_agents, network, topology):
     transformed_connections = transform.transform_connections(
         all_agents,
         net_connections,
-        topology if topology else net[fields.ConfigFields.TOPOLOGY],
+        topology if topology else network[fields.ConfigFields.TOPOLOGY],
     )
     if transformed_connections:
-        net[fields.ConfigFields.CONNECTIONS] = transformed_connections
+        network[fields.ConfigFields.CONNECTIONS] = transformed_connections
     if topology:
-        if net[fields.ConfigFields.TOPOLOGY] != topology:
-            net[fields.ConfigFields.IGNORE_NETWORK_TOPOLOGY] = True
-        net[fields.ConfigFields.TOPOLOGY] = topology
+        if network[fields.ConfigFields.TOPOLOGY] != topology:
+            network[fields.ConfigFields.IGNORE_NETWORK_TOPOLOGY] = True
+        network[fields.ConfigFields.TOPOLOGY] = topology
 
     # NOTE: Currently, SDN is disabled.
-    if fields.ConfigFields.USE_SDN in net:
-        del net[fields.ConfigFields.USE_SDN]
+    if fields.ConfigFields.USE_SDN in network:
+        del network[fields.ConfigFields.USE_SDN]
 
     # Filter out unused endpoints
     used_endpoints = [
@@ -88,12 +67,17 @@ def export_network(api, all_agents, network, topology):
         for con in net_connections
         for agent in ("agent_1", "agent_2")
     ]
-    net_endpoints = [
-        agent["agent_id"]
-        for id, agent in all_agents.items()
-        if network is None
-        or any(net["network_id"] == network["network_id"] for net in agent["networks"])
-    ]
+    if fields.ConfigFields.ID in network:
+        net_endpoints = [
+            agent["agent_id"]
+            for id, agent in all_agents.items()
+            if any(
+                net["network_id"] == network[fields.ConfigFields.ID]
+                for net in agent["networks"]
+            )
+        ]
+    else:
+        net_endpoints = [agent["agent_id"] for id, agent in all_agents.items()]
     unused_endpoints = [id for id in net_endpoints if id not in used_endpoints]
 
     if unused_endpoints:
@@ -105,7 +89,7 @@ def export_network(api, all_agents, network, topology):
         for agent in agents_services:
             agent_services[agent["agent_id"]].append(agent)
 
-        net[fields.ConfigFields.ENDPOINTS] = {
+        network[fields.ConfigFields.ENDPOINTS] = {
             all_agents[id]["agent_name"]: {
                 fields.ConfigFields.ID: id,
                 fields.ConfigFields.SERVICES: [
@@ -119,4 +103,29 @@ def export_network(api, all_agents, network, topology):
             for id in unused_endpoints
         }
 
-    return net
+    return network
+
+
+def export_network(api, all_agents, network, topology):
+    """Generate a network configuration structure from network and connections either
+    using specified topology or inferred topology.
+    Currently, default topology is P2M.
+
+    Args:
+        api (PlatformApi): Instance of PlatformApi.
+        all_agents (dict[int, dict]): A mapping of all user agents ids to agent objects.
+        network (dict): A dictionary describing a network to be exported.
+        topology (str): One of MetadataNetworkType.
+
+    Returns:
+        dict: A network configuration structure.
+    """
+    net = transform.transform_network(network)
+
+    connections = (
+        get_network_connections(api, net)
+        if network is not None
+        else get_agents_connections(api, all_agents)
+    )
+
+    return export_connections(api, all_agents, net, connections, topology)
