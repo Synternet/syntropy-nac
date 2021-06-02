@@ -25,7 +25,7 @@ def get_agents_connections(api, agents):
     return connections
 
 
-def export_connections(api, all_agents, network, connections, topology):
+def export_connections(api, all_agents, network, net_agents, connections, topology):
     ids = [connection["agent_connection_id"] for connection in connections]
     if ids:
         connections_services = sdk.utils.BatchedRequestQuery(
@@ -67,18 +67,7 @@ def export_connections(api, all_agents, network, connections, topology):
         for con in net_connections
         for agent in ("agent_1", "agent_2")
     ]
-    if fields.ConfigFields.ID in network:
-        net_endpoints = [
-            agent["agent_id"]
-            for id, agent in all_agents.items()
-            if any(
-                net["network_id"] == network[fields.ConfigFields.ID]
-                for net in agent["networks"]
-            )
-        ]
-    else:
-        net_endpoints = [agent["agent_id"] for id, agent in all_agents.items()]
-    unused_endpoints = [id for id in net_endpoints if id not in used_endpoints]
+    unused_endpoints = [id for id in net_agents if id not in used_endpoints]
 
     if unused_endpoints:
         agents_services = sdk.utils.BatchedRequestQuery(
@@ -128,4 +117,16 @@ def export_network(api, all_agents, network, topology):
         else get_agents_connections(api, all_agents)
     )
 
-    return export_connections(api, all_agents, net, connections, topology)
+    if network is not None:
+        net_agents = [
+            agent["agent_id"]
+            for _, agent in all_agents.items()
+            if any(
+                agent_net["network_id"] == net[fields.ConfigFields.ID]
+                for agent_net in agent["networks"]
+            )
+        ]
+    else:
+        net_agents = [agent["agent_id"] for _, agent in all_agents.items()]
+
+    return export_connections(api, all_agents, net, net_agents, connections, topology)
