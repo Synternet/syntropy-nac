@@ -24,8 +24,20 @@ class ConfigFields:
     USE_SDN = "use_sdn"
 
 
+class Topology:
+    P2P = "P2P"
+    P2M = "P2M"
+    MESH = "MESH"
+
+
 ALLOWED_PEER_TYPES = (
     PeerType.ENDPOINT,
     PeerType.ID,
     PeerType.TAG,
+)
+
+ALLOWED_TOPOLOGIES = (
+    Topology.P2P,
+    Topology.P2M,
+    Topology.MESH,
 )

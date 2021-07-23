@@ -24,7 +24,7 @@ def test_yaml(runner, test_yaml):
 
 
 def test_configure_networks(runner, test_yaml, config_mock, login_mock):
-    runner.invoke(ctl.configure_networks, ["test.yaml"])
+    print(runner.invoke(ctl.configure, ["test.yaml"]))
     config_mock.assert_called_once_with(
         mock.ANY,
         {
@@ -49,7 +49,7 @@ def test_configure_networks(runner, test_yaml, config_mock, login_mock):
 
 
 def test_configure_networks__dry_run(runner, test_yaml, config_mock, login_mock):
-    runner.invoke(ctl.configure_networks, ["--dry-run", "test.yaml"])
+    runner.invoke(ctl.configure, ["--dry-run", "test.yaml"])
     config_mock.assert_called_once_with(
         mock.ANY,
         {
@@ -75,40 +75,18 @@ def test_configure_networks__dry_run(runner, test_yaml, config_mock, login_mock)
 
 def test_export_networks(
     runner,
-    index_networks,
-    p2p_connections,
-    platform_agent_index_stub,
-    p2p_connection_services,
+    api,
     login_mock,
 ):
-    def agents(*args, **kwargs):
-        result = platform_agent_index_stub(*args, **kwargs)
-        for agent in result["data"]:
-            agent["networks"] = []
-        return result
-
-    with mock.patch.object(
-        sdk.PlatformApi,
-        "platform_network_index",
-        autospec=True,
-        return_value=index_networks,
-    ) as index_net, mock.patch.object(
-        sdk.PlatformApi,
-        "platform_connection_index",
-        autospec=True,
-        return_value={"data": p2p_connections},
-    ) as index_conn, mock.patch.object(
-        sdk.PlatformApi,
-        "platform_agent_index",
-        autospec=True,
-        side_effect=agents,
-    ) as index_ag, mock.patch.object(
-        sdk.PlatformApi,
-        "platform_connection_service_show",
-        autospec=True,
-        return_value={"data": p2p_connection_services},
-    ) as services_mock:
-        result = runner.invoke(ctl.export_networks)
-        assert "skip" in result.output
-        assert "test" in result.output
+    with mock.patch(
+        "syntropynac.decorators.sdk.PlatformApi", autospec=True
+    ) as the_mock:
+        the_mock.return_value = api
+        result = runner.invoke(ctl.export)
+        assert "connections" in result.output
+        assert "P2M" in result.output
+        assert "topology" in result.output
+        assert "state" in result.output
+        assert "present" in result.output
+        assert "endpoints" in result.output
         assert "nats-streaming" in result.output

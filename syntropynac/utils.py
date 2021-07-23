@@ -4,14 +4,7 @@ import syntropy_sdk as sdk
 from syntropy_sdk.utils import MAX_QUERY_FIELD_SIZE
 
 from syntropynac import fields, transform
-
-
-def get_network_connections(api, network):
-    connections_filter = f"networks[]:{network['id']}"
-    connections = sdk.utils.WithRetry(api.platform_connection_index)(
-        filter=connections_filter, take=sdk.utils.TAKE_MAX_ITEMS_PER_CALL
-    )["data"]
-    return connections
+from syntropynac.fields import ConfigFields, PeerState, PeerType, Topology
 
 
 def get_agents_connections(api, agents):
@@ -26,6 +19,7 @@ def get_agents_connections(api, agents):
 
 
 def export_connections(api, all_agents, network, net_agents, connections, topology):
+    topology = Topology.P2M if not topology else topology.upper()
     ids = [connection["agent_connection_id"] for connection in connections]
     if ids:
         connections_services = sdk.utils.BatchedRequestQuery(
@@ -52,10 +46,7 @@ def export_connections(api, all_agents, network, net_agents, connections, topolo
     )
     if transformed_connections:
         network[fields.ConfigFields.CONNECTIONS] = transformed_connections
-    if topology:
-        if network[fields.ConfigFields.TOPOLOGY] != topology:
-            network[fields.ConfigFields.IGNORE_NETWORK_TOPOLOGY] = True
-        network[fields.ConfigFields.TOPOLOGY] = topology
+    network[fields.ConfigFields.TOPOLOGY] = topology
 
     # NOTE: Currently, SDN is disabled.
     if fields.ConfigFields.USE_SDN in network:
@@ -95,7 +86,7 @@ def export_connections(api, all_agents, network, net_agents, connections, topolo
     return network
 
 
-def export_network(api, all_agents, network, topology):
+def export_network(api, all_agents, topology):
     """Generate a network configuration structure from network and connections either
     using specified topology or inferred topology.
     Currently, default topology is P2M.
@@ -109,24 +100,13 @@ def export_network(api, all_agents, network, topology):
     Returns:
         dict: A network configuration structure.
     """
-    net = transform.transform_network(network)
+    net = {
+        ConfigFields.TOPOLOGY: Topology.P2M,
+        ConfigFields.STATE: PeerState.PRESENT,
+    }
 
-    connections = (
-        get_network_connections(api, net)
-        if network is not None
-        else get_agents_connections(api, all_agents)
-    )
+    connections = get_agents_connections(api, all_agents)
 
-    if network is not None:
-        net_agents = [
-            agent["agent_id"]
-            for _, agent in all_agents.items()
-            if any(
-                agent_net["network_id"] == net[fields.ConfigFields.ID]
-                for agent_net in agent["networks"]
-            )
-        ]
-    else:
-        net_agents = [agent["agent_id"] for _, agent in all_agents.items()]
+    net_agents = [agent["agent_id"] for _, agent in all_agents.items()]
 
     return export_connections(api, all_agents, net, net_agents, connections, topology)

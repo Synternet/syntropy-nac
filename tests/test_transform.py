@@ -41,26 +41,6 @@ def test_transform_connection_services(connection_services, agent_connection_sub
     )
 
 
-def test_transform_network(index_networks):
-    assert transform.transform_network(index_networks["data"][0]) == {
-        "name": "skip",
-        "id": 321,
-        "topology": "P2P",
-        "use_sdn": True,
-        "state": "present",
-    }
-
-
-def test_transform_network__mesh_topology(index_networks):
-    assert transform.transform_network(index_networks["data"][1]) == {
-        "name": "test",
-        "id": 123,
-        "topology": "MESH",
-        "use_sdn": True,
-        "state": "present",
-    }
-
-
 def test_transform_connections__p2p(all_agents, p2p_connections):
     assert transform.transform_connections(all_agents, p2p_connections, "P2P") == {
         "de-hetzner-db01": {

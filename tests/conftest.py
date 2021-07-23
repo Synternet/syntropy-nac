@@ -37,6 +37,43 @@ def runner(api_lock_fix):
 
 
 @pytest.fixture
+def api(
+    p2p_connections,
+    platform_agent_index_stub,
+    p2p_connection_services,
+):
+    def get_services(ids):
+        return {
+            "data": [
+                {
+                    "agent_id": id,
+                    "agent_service_name": service,
+                }
+                for id in ids
+                for service in ("nginx", "redis")
+            ]
+        }
+
+    api = mock.Mock(spec=sdk.PlatformApi)
+    api.platform_connection_index = mock.Mock(
+        spec=sdk.PlatformApi.platform_connection_index,
+        return_value={"data": p2p_connections},
+    )
+    api.platform_agent_index = mock.Mock(
+        spec=sdk.PlatformApi.platform_agent_index, side_effect=platform_agent_index_stub
+    )
+    api.platform_connection_service_show = mock.Mock(
+        spec=sdk.PlatformApi.platform_connection_service_show,
+        return_value={"data": p2p_connection_services},
+    )
+    api.platform_agent_service_index = mock.Mock(
+        spec=sdk.PlatformApi.platform_agent_service_index,
+        side_effect=get_services,
+    )
+    return api
+
+
+@pytest.fixture
 def test_yaml():
     return """---
 # Create connection between IoT devices and IoT load balancer
@@ -71,35 +108,6 @@ connections:
 @pytest.fixture
 def all_agents(platform_agent_index_stub):
     return {agent["agent_id"]: agent for agent in platform_agent_index_stub()["data"]}
-
-
-@pytest.fixture
-def index_networks():
-    return {
-        "data": [
-            {
-                "network_name": "skip",
-                "network_id": 321,
-                "network_disable_sdn_connections": False,
-                "network_metadata": {
-                    "network_type": "P2P",
-                },
-            },
-            {
-                "network_name": "test",
-                "network_id": 123,
-                "network_disable_sdn_connections": False,
-                "network_metadata": {
-                    "network_type": "MESH",
-                },
-            },
-            {
-                "network_name": "test",
-                "network_id": 456,
-                "network_disable_sdn_connections": False,
-            },
-        ]
-    }
 
 
 @pytest.fixture

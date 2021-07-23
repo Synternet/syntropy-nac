@@ -4,40 +4,7 @@ import click
 import syntropy_sdk as sdk
 
 from syntropynac.exceptions import ConfigureNetworkError
-from syntropynac.fields import ConfigFields, PeerState, PeerType
-
-
-def transform_network_default():
-    return {
-        ConfigFields.NAME: "Syntropy Stack Account Network",
-        ConfigFields.TOPOLOGY: sdk.MetadataNetworkType.P2M,
-        ConfigFields.STATE: PeerState.PRESENT,
-    }
-
-
-def transform_network(network, reference=None):
-    """Transforms NetworkObject into internal representation that is used either for export or configuration.
-    Returns a default network representation if network == None.
-
-    Args:
-        network (NetworkObject): A Network to transform. None represents the default network.
-        reference (dict): A dictionary describing reference Network configuration.
-
-    Returns:
-        dict: Transformed Network representation.
-    """
-
-    if network is None:
-        return transform_network_default()
-
-    topology = network.get("network_metadata", {}).get("network_type", "").upper()
-    return {
-        ConfigFields.NAME: network["network_name"],
-        ConfigFields.ID: network["network_id"],
-        ConfigFields.TOPOLOGY: topology if topology else sdk.MetadataNetworkType.P2P,
-        ConfigFields.USE_SDN: not network.get("network_disable_sdn_connections", True),
-        ConfigFields.STATE: PeerState.PRESENT,
-    }
+from syntropynac.fields import ConfigFields, PeerState, PeerType, Topology
 
 
 def get_enabled_connection_subnets(connection):
@@ -371,9 +338,9 @@ def transform_connections(
         dict: Returns a dictionary that can be used for network export and/or configuration.
     """
     topology_map = {
-        sdk.MetadataNetworkType.P2P: transform_p2p_connections,
-        sdk.MetadataNetworkType.P2M: transform_p2m_connections,
-        sdk.MetadataNetworkType.MESH: transform_mesh_connections,
+        Topology.P2P: transform_p2p_connections,
+        Topology.P2M: transform_p2m_connections,
+        Topology.MESH: transform_mesh_connections,
     }
     if topology not in topology_map:
         error = f"Network topology {topology} not supported. Skipping."

@@ -5,7 +5,8 @@ import click
 import syntropy_sdk as sdk
 import yaml
 
-from syntropynac import configure, fields, transform, utils
+from syntropynac import configure as configure_module
+from syntropynac import fields, transform, utils
 from syntropynac.decorators import syntropy_platform
 
 
@@ -16,12 +17,6 @@ def apis():
 
 @apis.command()
 @click.argument("config")
-@click.option(
-    "--network",
-    default=None,
-    type=str,
-    help="Filter configuration file networks by name.",
-)
 @click.option(
     "--dry-run",
     is_flag=True,
@@ -37,8 +32,8 @@ def apis():
     help="Imports configuration from JSON instead of YAML.",
 )
 @syntropy_platform
-def configure_networks(config, network, dry_run, from_json, platform):
-    """Configure networks using a configuration YAML/JSON file.
+def configure(config, dry_run, from_json, platform):
+    """Configure connections using a configuration YAML/JSON file.
 
     \b
     Example YAML file:
@@ -81,24 +76,18 @@ def configure_networks(config, network, dry_run, from_json, platform):
         return
 
     for index, net in enumerate(config):
-        if any(i not in net for i in ("name", "topology", "state")):
+        if any(i not in net for i in ("topology", "state")):
             click.secho(
                 f"Skipping {index} entry as no name, topology or state found.",
                 fg="yellow",
             )
             continue
-        if (network and network in net["name"]) or not network:
-            configure.configure_network(platform, net, dry_run)
+        configure_module.configure_network(platform, net, dry_run)
 
     click.secho("Done", fg="green")
 
 
 @apis.command()
-@click.option(
-    "--network", default=None, type=str, help="Filter networks by name or ID."
-)
-@click.option("--skip", default=0, type=int, help="Skip N networks.")
-@click.option("--take", default=42, type=int, help="Take N networks.")
 @click.option("--topology", default=None, type=str, help="Override network topology.")
 @click.option(
     "--json",
@@ -108,59 +97,22 @@ def configure_networks(config, network, dry_run, from_json, platform):
     default=False,
     help="Outputs a JSON instead of YAML.",
 )
-@click.option(
-    "--global",
-    "-g",
-    "global_network",
-    is_flag=True,
-    default=False,
-    help="Retrieves global Syntropy Account network.",
-)
 @syntropy_platform
-def export_networks(network, skip, take, global_network, topology, to_json, platform):
-    """Exports existing networks to configuration YAML/JSON file.
-
-    If the network was created via UI or manually with complex topology in order
-    to get full export, you might want to override the topology.
+def export(topology, to_json, platform):
+    """Exports existing connections to configuration YAML/JSON file.
 
     If exact topology export is required - use P2P topology.
-
-    By default this command will retrieve up to 42 networks. You can use --take parameter to get more networks.
     """
-    if topology:
-        topology = topology.upper()
-        if topology not in sdk.utils.ALLOWED_NETWORK_TOPOLOGIES:
-            click.secho(
-                f"Network topology {topology} not supported. Skipping.",
-                err=True,
-                fg="red",
-            )
-            return
-
-    if not global_network:
-        networks = platform.platform_network_index(
-            filter=f"id|name:'{network}'" if network else None,
-            skip=skip,
-            take=take,
-        )["data"]
-        if not networks:
-            return
-    else:
-        networks = [None]
-
     all_agents = sdk.utils.WithRetry(platform.platform_agent_index)(
         take=sdk.utils.TAKE_MAX_ITEMS_PER_CALL
     )["data"]
     all_agents = {agent["agent_id"]: agent for agent in all_agents}
 
-    networks = [
-        utils.export_network(platform, all_agents, net, topology) for net in networks
-    ]
-
+    network = utils.export_network(platform, all_agents, topology)
     if to_json:
-        click.echo(json.dumps(networks, indent=4))
+        click.echo(json.dumps(network, indent=4))
     else:
-        click.echo(yaml.dump_all(networks))
+        click.echo(yaml.dump_all([network]))
 
 
 def main():

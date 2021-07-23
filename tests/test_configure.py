@@ -144,66 +144,19 @@ def connections_stub():
     return stub
 
 
-@pytest.fixture
-def api(
-    networks,
-    connections_stub,
-    created_connections,
-    platform_agent_index_stub,
-    connection_services_stub,
-):
-    api = mock.Mock(spec=sdk.PlatformApi)
-    api.platform_network_index = mock.Mock(
-        spec=sdk.PlatformApi.platform_network_index, return_value={"data": networks}
-    )
-    api.platform_connection_index = mock.Mock(
-        spec=sdk.PlatformApi.platform_connection_index,
-        side_effect=connections_stub,
-    )
-    api.platform_network_create = mock.Mock(
-        spec=sdk.PlatformApi.platform_network_create,
-        return_value={"data": {"network_id": 321}},
-    )
-    api.platform_connection_create_p2p = mock.Mock(
-        spec=sdk.PlatformApi.platform_connection_create_p2p,
-        return_value={"data": created_connections},
-    )
-    api.platform_connection_destroy = mock.Mock(
-        spec=sdk.PlatformApi.platform_connection_destroy
-    )
-    api.platform_network_destroy = mock.Mock(
-        spec=sdk.PlatformApi.platform_network_destroy
-    )
-    api.platform_agent_index = mock.Mock(
-        spec=sdk.PlatformApi.platform_agent_index, side_effect=platform_agent_index_stub
-    )
-    api.platform_connection_service_show = mock.Mock(
-        spec=sdk.PlatformApi.platform_connection_service_show,
-        side_effect=connection_services_stub,
-    )
-    api.platform_connection_service_update = mock.Mock(
-        spec=sdk.PlatformApi.platform_connection_service_update,
-    )
-    return api
-
-
 def test_create_connections(api, created_connections):
     api.platform_connection_index.side_effect = lambda *args, **kwargs: {
         "data": created_connections
     }
 
-    result = configure.create_connections(
-        api, 123, "name123", [(13, 11), (14, 13)], True
-    )
+    result = configure.create_connections(api, [(13, 11), (14, 13)], True)
     assert api.platform_connection_create_p2p.call_args_list == [
         mock.call(
             body={
-                "network_ids": [123],
                 "agent_ids": [
                     {"agent_1_id": 13, "agent_2_id": 11},
                     {"agent_1_id": 14, "agent_2_id": 13},
                 ],
-                "network_update_by": sdk.NetworkGenesisType.CONFIG,
             },
         ),
     ]
@@ -284,7 +237,12 @@ def test_configure_connection(
 
 
 def test_configure_network__validation_fail(api, validate_connections_mock):
-    config = {"name": "test", "state": "present", "connections": {"a": {}, "b": {}}}
+    config = {
+        "name": "test",
+        "topology": "p2p",
+        "state": "present",
+        "connections": {"a": {}, "b": {}},
+    }
     validate_connections_mock.return_value = False
     with pytest.raises(exceptions.ConfigureNetworkError):
         configure.configure_network(api, config, "False", silent="silent")
@@ -294,7 +252,7 @@ def test_configure_network__validation_fail(api, validate_connections_mock):
 
 
 def test_configure_network__create(api, validate_connections_mock):
-    config = {"name": "test", "id": None, "state": "present"}
+    config = {"name": "test", "topology": "P2P", "state": "present"}
     with mock.patch(
         "syntropynac.configure.configure_network_create",
         autospec=True,
@@ -309,51 +267,8 @@ def test_configure_network__create(api, validate_connections_mock):
 
 
 def test_configure_network__delete(api, validate_connections_mock):
-    config = {"name": "test2", "state": "absent"}
-    with mock.patch(
-        "syntropynac.configure.configure_network_delete",
-        autospec=True,
-        return_value="changed",
-    ) as the_mock:
-        assert (
-            configure.configure_network(api, config, "False", silent="silent")
-            == "changed"
-        )
-        the_mock.assert_called_once_with(
-            api,
-            {
-                "name": "test2",
-                "id": 2,
-                "topology": "P2M",
-                "use_sdn": True,
-                "state": "present",
-            },
-            config,
-            "False",
-            silent="silent",
-        )
-        validate_connections_mock.assert_called_once_with({}, silent="silent")
-
-
-def test_configure_network__update(networks, api, validate_connections_mock):
-    config = {"name": "test2", "state": "present"}
-    with mock.patch(
-        "syntropynac.configure.configure_network_update",
-        autospec=True,
-        return_value="changed",
-    ) as the_mock:
-        assert (
-            configure.configure_network(api, config, "False", silent="silent")
-            == "changed"
-        )
-        the_mock.assert_called_once_with(
-            api,
-            transform.transform_network(networks[1]),
-            config,
-            "False",
-            silent="silent",
-        )
-        validate_connections_mock.assert_called_once_with({}, silent="silent")
+    config = {"name": "test2", "topology": "p2p", "state": "absent"}
+    assert configure.configure_network(api, config, "False", silent="silent") == False
 
 
 def test_create_network__dry_run(api):
@@ -378,13 +293,11 @@ def test_create_network__dry_run(api):
         return_value=[[1, 2], [3, 4], []],
     ) as the_mock:
         assert configure.configure_network_create(api, config, True) == False
-        assert api.platform_network_create.call_count == 0
         assert api.platform_connection_create.call_count == 0
 
 
 def test_create_network__p2p(api, config_mock):
     config = {
-        "name": "test",
         "topology": "P2P",
         "state": "present",
         "connections": {
@@ -413,27 +326,14 @@ def test_create_network__p2p(api, config_mock):
     ) as the_mock:
         assert configure.configure_network_create(api, config, False) == True
         the_mock.assert_called_once()
-        assert api.platform_network_create.call_args_list == [
-            mock.call(
-                body={
-                    "network_name": "test",
-                    "network_disable_sdn_connections": True,
-                    "network_metadata": {
-                        "network_created_by": "CONFIG",
-                        "network_type": "P2P",
-                    },
-                },
-            )
-        ]
+
         assert api.platform_connection_create_p2p.call_args_list == [
             mock.call(
                 body={
-                    "network_ids": [321],
                     "agent_ids": [
                         {"agent_1_id": 1, "agent_2_id": 2},
                         {"agent_1_id": 3, "agent_2_id": 4},
                     ],
-                    "network_update_by": "CONFIG",
                 },
             )
         ]
@@ -441,7 +341,6 @@ def test_create_network__p2p(api, config_mock):
 
 def test_create_network__p2m(api, config_mock):
     config = {
-        "name": "test",
         "topology": "p2m",
         "state": "present",
         "connections": {
@@ -467,27 +366,14 @@ def test_create_network__p2m(api, config_mock):
         return_value=([[1, 2], [3, 4]], [], []),
     ) as the_mock:
         assert configure.configure_network_create(api, config, False) == True
-        assert api.platform_network_create.call_args_list == [
-            mock.call(
-                body={
-                    "network_name": "test",
-                    "network_disable_sdn_connections": True,
-                    "network_metadata": {
-                        "network_created_by": "CONFIG",
-                        "network_type": "P2M",
-                    },
-                }
-            )
-        ]
+
         assert api.platform_connection_create_p2p.call_args_list == [
             mock.call(
                 body={
-                    "network_ids": [321],
                     "agent_ids": [
                         {"agent_1_id": 1, "agent_2_id": 2},
                         {"agent_1_id": 3, "agent_2_id": 4},
                     ],
-                    "network_update_by": "CONFIG",
                 },
             )
         ]
@@ -518,28 +404,15 @@ def test_create_network__mesh(api, config_mock):
         return_value=([[1, 2], [1, 4], [2, 4]], [], []),
     ) as the_mock:
         assert configure.configure_network_create(api, config, False) == True
-        assert api.platform_network_create.call_args_list == [
-            mock.call(
-                body={
-                    "network_name": "test",
-                    "network_disable_sdn_connections": True,
-                    "network_metadata": {
-                        "network_created_by": "CONFIG",
-                        "network_type": "MESH",
-                    },
-                }
-            )
-        ]
+
         assert api.platform_connection_create_p2p.call_args_list == [
             mock.call(
                 body={
-                    "network_ids": [321],
                     "agent_ids": [
                         {"agent_1_id": 1, "agent_2_id": 2},
                         {"agent_1_id": 1, "agent_2_id": 4},
                         {"agent_1_id": 2, "agent_2_id": 4},
                     ],
-                    "network_update_by": "CONFIG",
                 },
             )
         ]
@@ -547,8 +420,6 @@ def test_create_network__mesh(api, config_mock):
 
 def test_create_network__mesh__fail_with_id(api, config_mock):
     config = {
-        "name": "test",
-        "id": 123,
         "topology": "mesh",
         "state": "present",
         "connections": {
@@ -565,29 +436,16 @@ def test_create_network__mesh__fail_with_id(api, config_mock):
     }
     with pytest.raises(exceptions.ConfigureNetworkError):
         configure.configure_network_create(api, config, False, silent=True)
-    assert api.platform_network_create.call_count == 0
     assert api.platform_connection_create_p2p.call_count == 0
 
 
 def test_delete_network__dry_run(networks, api, delete_config):
-    assert (
-        configure.configure_network_delete(
-            api, transform.transform_network(networks[1]), delete_config, True
-        )
-        == False
-    )
-    assert api.platform_network_destroy.call_count == 0
+    assert configure.configure_network_delete(api, delete_config, True) == False
     assert api.platform_connection_destroy.call_count == 0
 
 
 def test_delete_network(api, networks, delete_config):
-    assert (
-        configure.configure_network_delete(
-            api, transform.transform_network(networks[0]), delete_config, False
-        )
-        == True
-    )
-    assert api.platform_network_destroy.call_args_list == [mock.call(1)]
+    assert configure.configure_network_delete(api, delete_config, False) == True
     assert api.platform_connection_destroy.call_args_list == [
         mock.call(
             body=[
@@ -600,227 +458,5 @@ def test_delete_network(api, networks, delete_config):
                     "agent_2_id": 4,
                 },
             ]
-        )
-    ]
-
-
-def test_update_network__p2p_dry_run(api, networks):
-    config = {
-        "name": "test1",
-        "topology": "p2p",
-        "state": "present",
-        "connections": {
-            "agent1": {
-                "connect_to": {
-                    "agent2": {},
-                }
-            },
-            "agent3": {
-                "state": "absent",
-                "connect_to": {
-                    "agent4": {},
-                },
-            },
-            "agent5": {"connect_to": {"agent6": {}}},
-        },
-    }
-    assert (
-        configure.configure_network_update(
-            api, transform.transform_network(networks[0]), config, True
-        )
-        == False
-    )
-    assert api.platform_connection_index.call_count == 1
-    assert api.platform_network_create.call_count == 0
-    assert api.platform_connection_destroy.call_count == 0
-    assert api.platform_connection_create_p2p.call_count == 0
-
-
-def test_update_network__p2p(api, networks, config_mock):
-    config = {
-        "name": "test1",
-        "topology": "p2p",
-        "state": "present",
-        "connections": {
-            "agent1": {
-                "state": "absent",
-                "connect_to": {
-                    "agent2": {},
-                },
-            },
-            "agent5": {"connect_to": {"agent6": {}}},
-        },
-    }
-    assert (
-        configure.configure_network_update(
-            api, transform.transform_network(networks[0]), config, False
-        )
-        == True
-    )
-    assert api.platform_connection_index.call_count == 2
-    assert api.platform_network_create.call_count == 0
-    assert api.platform_connection_destroy.call_args_list == [
-        mock.call(body=[{"agent_1_id": 1, "agent_2_id": 2}]),
-    ]
-    assert api.platform_connection_create_p2p.call_args_list == [
-        mock.call(
-            body={
-                "network_ids": [1],
-                "agent_ids": [{"agent_1_id": 5, "agent_2_id": 6}],
-                "network_update_by": "CONFIG",
-            },
-        )
-    ]
-
-
-def test_update_network__p2m_dry_run(api, networks):
-    config = {
-        "name": "test2",
-        "topology": "p2m",
-        "state": "present",
-        "connections": {
-            "agent1": {
-                "connect_to": {
-                    "agent2": {"state": "absent"},
-                    "agent3": {},
-                    "agent4": {},
-                }
-            },
-            "agent5": {"connect_to": {"agent6": {}}},
-        },
-    }
-    assert (
-        configure.configure_network_update(
-            api, transform.transform_network(networks[1]), config, True
-        )
-        == False
-    )
-    assert api.platform_connection_index.call_count == 1
-    assert api.platform_network_create.call_count == 0
-    assert api.platform_connection_destroy.call_count == 0
-    assert api.platform_connection_create_p2p.call_count == 0
-
-
-def test_update_network__p2m(api, networks, config_mock):
-    config = {
-        "name": "test2",
-        "topology": "p2m",
-        "state": "present",
-        "connections": {
-            "agent1": {
-                "connect_to": {
-                    "agent2": {"state": "absent"},
-                    "agent3": {},
-                    "agent4": {},
-                }
-            },
-            "agent5": {"connect_to": {"agent6": {}}},
-        },
-    }
-    assert (
-        configure.configure_network_update(
-            api, transform.transform_network(networks[1]), config, False
-        )
-        == True
-    )
-    assert api.platform_connection_index.call_count == 2
-    assert api.platform_network_create.call_count == 0
-    assert api.platform_connection_destroy.call_args_list == [
-        mock.call(body=[{"agent_1_id": 1, "agent_2_id": 2}]),
-    ]
-    assert api.platform_connection_create_p2p.call_args_list == [
-        mock.call(
-            body={
-                "network_ids": [2],
-                "agent_ids": [
-                    {"agent_1_id": 1, "agent_2_id": 3},
-                    {"agent_1_id": 1, "agent_2_id": 4},
-                    {"agent_1_id": 5, "agent_2_id": 6},
-                ],
-                "network_update_by": "CONFIG",
-            },
-        )
-    ]
-
-
-def test_update_network__mesh_dry_run(api, networks):
-    config = {
-        "name": "test3",
-        "topology": "mesh",
-        "state": "present",
-        "connections": {
-            "agent1": {
-                "state": "present",
-            },
-            "agent2": {
-                "state": "absent",
-            },
-            "agent3": {
-                "state": "present",
-            },
-            "agent4": {
-                "state": "present",
-            },
-        },
-    }
-    assert (
-        configure.configure_network_update(
-            api, transform.transform_network(networks[2]), config, True
-        )
-        == False
-    )
-    assert api.platform_connection_index.call_count == 1
-    assert api.platform_network_create.call_count == 0
-    assert api.platform_connection_destroy.call_count == 0
-    assert api.platform_connection_create_p2p.call_count == 0
-
-
-def test_update_network__mesh(api, networks, config_mock):
-    config = {
-        "name": "test3",
-        "topology": "mesh",
-        "state": "present",
-        "connections": {
-            "agent1": {
-                "state": "present",
-            },
-            "agent2": {
-                "state": "absent",
-            },
-            "agent3": {
-                "state": "present",
-            },
-            "agent5": {
-                "state": "present",
-            },
-        },
-    }
-    assert (
-        configure.configure_network_update(
-            api, transform.transform_network(networks[2]), config, False
-        )
-        == True
-    )
-    assert api.platform_connection_index.call_count == 2
-    assert api.platform_network_create.call_count == 0
-    assert api.platform_connection_destroy.call_args_list == [
-        mock.call(
-            body=[
-                {"agent_1_id": 1, "agent_2_id": 2},
-                {"agent_1_id": 2, "agent_2_id": 3},
-                {"agent_1_id": 2, "agent_2_id": 5},
-            ]
-        ),
-    ]
-    assert api.platform_connection_create_p2p.call_args_list == [
-        mock.call(
-            body={
-                "network_ids": [3],
-                "agent_ids": [
-                    {"agent_1_id": 1, "agent_2_id": 5},
-                    {"agent_1_id": 3, "agent_2_id": 5},
-                ],
-                "network_update_by": "CONFIG",
-            },
         )
     ]
