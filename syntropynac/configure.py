@@ -135,10 +135,12 @@ def configure_connections(api, services_config, connections, silent=False):
     return updated_connections, updated_subnets
 
 
-def configure_network_create(api, config, dry_run, silent=False):
-    """Configures a new network using provided config.
+def configure_network_update(api, config, dry_run, silent=False):
+    """Updates existing network's connection.
+    NOTE: This will ignore any preconfigured connections that are not
+    explicitly specified in the config dictionary.
 
-    Example dictionary:
+    Example config dictionary:
     {
         "topology": `P2P|P2M|MESH`,
         "use_sdn": `True|False`,
@@ -208,67 +210,90 @@ def configure_network_create(api, config, dry_run, silent=False):
     }
 
     Args:
-        api (PlatformApi): Instance of the platform API
-        config (dict): Configuration dictionary
-        dry_run (bool): Indicates whether to perform a dry run (without any configuration)
+        api (PlatformApi): Instance of the platform API.
+        config (dict): Configuration dictionary.
+        dry_run (bool): Indicates whether to perform a dry run (without any configuration).
         silent (bool, optional): Indicates whether to suppress messages - used with Ansible. Defaults to False.
-
     Returns:
         (bool): True if any changes were made and False otherwise
     """
     topology = config[ConfigFields.TOPOLOGY].upper()
-    connections = config.get(ConfigFields.CONNECTIONS, {})
-
-    if topology not in ALLOWED_TOPOLOGIES:
-        error = f"Network topology {topology} is not allowed."
-        if not silent:
-            click.secho(error, err=True, fg="red")
-            return False
-        else:
-            raise ConfigureNetworkError(error)
-
-    if topology == Topology.P2P or topology == Topology.P2M:
-        if not all(
-            ConfigFields.CONNECT_TO in connection for connection in connections.values()
-        ):
-            error = f"All connections must have {ConfigFields.CONNECT_TO} parameter for topology {topology}."
-            if not silent:
-                click.secho(
-                    error,
-                    err=True,
-                    fg="red",
-                )
-                return False
-            else:
-                raise ConfigureNetworkError(error)
+    connections = utils.WithRetry(api.platform_connection_index)(
+        take=utils.TAKE_MAX_ITEMS_PER_CALL,
+    )["data"]
+    all_agents = resolve.get_all_agents(api, silent)
+    resolved_connections = transform.transform_connections(
+        all_agents,
+        connections,
+        topology,
+        group_tags=False,
+        silent=silent,
+    )
+    current_connections = {
+        frozenset(
+            (connection["agent_1"]["agent_id"], connection["agent_2"]["agent_id"])
+        ): connection
+        for connection in connections
+    }
+    config_connections = config.get(ConfigFields.CONNECTIONS, {})
 
     if topology == Topology.P2P:
-        peers, _, services = resolve.resolve_p2p_connections(
-            api, connections, silent=silent
+        present, absent, services = resolve.resolve_p2p_connections(
+            api, config_connections, silent=silent
         )
     elif topology == Topology.P2M:
-        peers, _, services = resolve.resolve_p2m_connections(
-            api, connections, silent=silent
+        present, absent, services = resolve.resolve_p2m_connections(
+            api, config_connections, silent=silent
         )
     else:
-        peers, _, services = resolve.resolve_mesh_connections(
-            api, connections, silent=silent
+        present, absent, services = resolve.resolve_mesh_connections(
+            api, config_connections, silent=silent
+        )
+    if topology == Topology.P2P:
+        current, _, _ = resolve.resolve_p2p_connections(
+            api, resolved_connections, silent=silent
+        )
+    elif topology == Topology.P2M:
+        current, _, _ = resolve.resolve_p2m_connections(
+            api, resolved_connections, silent=silent
+        )
+    else:
+        current, _, _ = resolve.resolve_mesh_connections(
+            api, resolved_connections, silent=silent
         )
 
-    if not peers:
-        not silent and click.secho(
-            f"No valid peers specified",
-            fg="yellow",
-            err=True,
-        )
-        return False
+    present = [frozenset(i) for i in present]
+    absent = [frozenset(i) for i in absent]
+    current = [frozenset(i) for i in current]
+
+    to_add = [list(link) for link in present if link not in current]
 
     if dry_run:
-        not silent and click.echo(f"Would create {len(peers)} connections")
-        return False
+        not silent and click.echo(f"Would remove {len(absent)} connections.")
     else:
-        connections = create_connections(api, peers, silent)
+        delete_connections(api, absent)
+        not silent and click.echo(f"Removed {len(absent)} connections.")
 
+    added_connections = []
+    if dry_run:
+        not silent and click.echo(f"Would create {len(to_add)} connections.")
+    elif to_add:
+        added_connections = create_connections(api, to_add, silent)
+
+    to_remove = [
+        conn["agent_connection_id"]
+        for link, conn in current_connections.items()
+        if link in absent
+    ]
+    connections = [
+        connection
+        for connection in connections + added_connections
+        if connection["agent_connection_id"] not in to_remove
+    ]
+
+    if dry_run:
+        not silent and click.echo(f"Would configure {len(connections)} connections.")
+    else:
         updated_connections, updated_subnets = configure_connections(
             api, services, connections, silent=silent
         )
@@ -276,6 +301,7 @@ def configure_network_create(api, config, dry_run, silent=False):
             f"Configured {updated_connections} connections and {updated_subnets} subnets"
         )
         return True
+    return False
 
 
 def configure_network_delete(api, config, dry_run, silent=False):
@@ -356,7 +382,7 @@ def configure_network(api, config, dry_run, silent=False):
     not silent and click.secho(f"Configuring network", fg="green")
 
     if state == PeerState.PRESENT:
-        return configure_network_create(api, config, dry_run, silent=silent)
+        return configure_network_update(api, config, dry_run, silent=silent)
     elif state == PeerState.ABSENT:
         return configure_network_delete(api, config, dry_run, silent=silent)
     return False
