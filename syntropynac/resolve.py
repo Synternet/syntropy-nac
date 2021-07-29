@@ -58,9 +58,9 @@ class ConnectionServices:
 def resolve_agent_by_name(api, name, silent=False):
     return [
         agent["agent_id"]
-        for agent in utils.WithRetry(api.platform_agent_index)(
-            filter=f"name:'{name}'", load_relations=False
-        )["data"]
+        for agent in utils.WithRetry(api.platform_agent_index)(filter=f"name:'{name}'")[
+            "data"
+        ]
     ]
 
 
