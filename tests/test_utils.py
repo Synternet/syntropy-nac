@@ -7,15 +7,11 @@ from syntropynac import transform, utils
 from tests.utils import EqualSets
 
 
-def test_export_p2p_network(api, all_agents, p2p_connections):
+def test_export_p2p_network(api_agents, api_connections, api_services, all_agents):
     ids = list(all_agents.keys())
     for id in ids:
         if id > 16:
             del all_agents[id]
-    api.platform_connection_index = mock.Mock(
-        spec=sdk.PlatformApi.platform_connection_index,
-        return_value={"data": p2p_connections},
-    )
     result = {
         "connections": {
             "de-aws-lb01": {
@@ -91,17 +87,21 @@ def test_export_p2p_network(api, all_agents, p2p_connections):
         "state": "present",
         "topology": "P2P",
     }
-    assert utils.export_network(api, all_agents, "p2p") == result
-    api.platform_agent_service_index.assert_called_once()
+    assert (
+        utils.export_network(mock.Mock(spec=sdk.ApiClient), all_agents, "p2p") == result
+    )
+    sdk.ServicesApi.platform_agent_service_index.assert_called_once()
 
 
-def test_export_mesh_network(api, all_agents, p2m_connections):
+def test_export_mesh_network(
+    api_agents, api_connections, api_services, all_agents, p2m_connections
+):
     ids = list(all_agents.keys())
     for id in ids:
         if id > 16:
             del all_agents[id]
-    api.platform_connection_index = mock.Mock(
-        spec=sdk.PlatformApi.platform_connection_index,
+    sdk.ConnectionsApi.platform_connection_groups_index = mock.Mock(
+        spec=sdk.ConnectionsApi.platform_connection_groups_index,
         return_value={"data": p2m_connections},
     )
     result = {
@@ -178,17 +178,22 @@ def test_export_mesh_network(api, all_agents, p2m_connections):
         "topology": "MESH",
     }
 
-    assert utils.export_network(api, all_agents, "mesh") == result
-    api.platform_agent_service_index.assert_called_once()
+    assert (
+        utils.export_network(mock.Mock(spec=sdk.ApiClient), all_agents, "mesh")
+        == result
+    )
+    sdk.ServicesApi.platform_agent_service_index.assert_called_once()
 
 
-def test_export_p2p1_network(api, all_agents, mesh_connections):
+def test_export_p2p1_network(
+    api_agents, api_connections, api_services, all_agents, mesh_connections
+):
     ids = list(all_agents.keys())
     for id in ids:
         if id > 16:
             del all_agents[id]
-    api.platform_connection_index = mock.Mock(
-        spec=sdk.PlatformApi.platform_connection_index,
+    sdk.ConnectionsApi.platform_connection_groups_index = mock.Mock(
+        spec=sdk.ConnectionsApi.platform_connection_groups_index,
         return_value={"data": mesh_connections},
     )
     result = {
@@ -278,5 +283,7 @@ def test_export_p2p1_network(api, all_agents, mesh_connections):
         "topology": "P2P",
     }
 
-    assert utils.export_network(api, all_agents, "p2p") == result
-    api.platform_agent_service_index.assert_called_once()
+    assert (
+        utils.export_network(mock.Mock(spec=sdk.ApiClient), all_agents, "p2p") == result
+    )
+    sdk.ServicesApi.platform_agent_service_index.assert_called_once()

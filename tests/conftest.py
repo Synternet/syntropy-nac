@@ -37,12 +37,68 @@ def runner(api_lock_fix):
 
 
 @pytest.fixture
-def api(
-    p2p_connections,
+def api_agents(
     platform_agent_index_stub,
+):
+    with mock.patch.object(
+        sdk.AgentsApi,
+        "platform_agent_index",
+        autospec=True,
+        side_effect=platform_agent_index_stub,
+    ) as api:
+        yield api
+
+
+@pytest.fixture
+def with_pagination():
+    with mock.patch.object(
+        sdk.utils,
+        "WithPagination",
+        autospec=True,
+        side_effect=lambda x: x,
+    ) as api:
+        yield api
+
+
+@pytest.fixture
+def with_batched():
+    with mock.patch.object(
+        sdk.utils,
+        "BatchedRequest",
+        autospec=True,
+        side_effect=lambda x: x,
+    ) as api:
+        yield api
+
+
+@pytest.fixture
+def api_connections(
+    p2p_connections,
+):
+    with mock.patch.object(
+        sdk.ConnectionsApi,
+        "platform_connection_groups_index",
+        autospec=True,
+        return_value={"data": p2p_connections},
+    ) as api:
+        with mock.patch.object(
+            sdk.ConnectionsApi,
+            "platform_connection_create_p2p",
+            autospec=True,
+        ) as api:
+            with mock.patch.object(
+                sdk.ConnectionsApi,
+                "platform_connections_destroy_deprecated",
+                autospec=True,
+            ) as api:
+                yield api
+
+
+@pytest.fixture
+def api_services(
     p2p_connection_services,
 ):
-    def get_services(ids):
+    def get_services(_, ids, **kwargs):
         return {
             "data": [
                 {
@@ -54,23 +110,24 @@ def api(
             ]
         }
 
-    api = mock.Mock(spec=sdk.PlatformApi)
-    api.platform_connection_index = mock.Mock(
-        spec=sdk.PlatformApi.platform_connection_index,
-        return_value={"data": p2p_connections},
-    )
-    api.platform_agent_index = mock.Mock(
-        spec=sdk.PlatformApi.platform_agent_index, side_effect=platform_agent_index_stub
-    )
-    api.platform_connection_service_show = mock.Mock(
-        spec=sdk.PlatformApi.platform_connection_service_show,
+    with mock.patch.object(
+        sdk.ServicesApi,
+        "platform_connection_service_show",
+        autospec=True,
         return_value={"data": p2p_connection_services},
-    )
-    api.platform_agent_service_index = mock.Mock(
-        spec=sdk.PlatformApi.platform_agent_service_index,
-        side_effect=get_services,
-    )
-    return api
+    ):
+        with mock.patch.object(
+            sdk.ServicesApi,
+            "platform_agent_service_index",
+            autospec=True,
+            side_effect=get_services,
+        ):
+            with mock.patch.object(
+                sdk.ServicesApi,
+                "platform_connection_service_update",
+                autospec=True,
+            ):
+                yield
 
 
 @pytest.fixture
@@ -114,7 +171,7 @@ def all_agents(platform_agent_index_stub):
 def p2p_connections():
     return [
         {
-            "agent_connection_id": 1,
+            "agent_connection_group_id": 1,
             "agent_1": {
                 "agent_id": 1,
                 "agent_name": "de-hetzner-db01",
@@ -125,7 +182,7 @@ def p2p_connections():
             },
         },
         {
-            "agent_connection_id": 2,
+            "agent_connection_group_id": 2,
             "agent_1": {
                 "agent_id": 3,
                 "agent_name": "de-aws-lb01",
@@ -142,7 +199,7 @@ def p2p_connections():
 def p2m_connections():
     return [
         {
-            "agent_connection_id": 3,
+            "agent_connection_group_id": 3,
             "agent_1": {
                 "agent_id": 1,
                 "agent_name": "auto gen 1",
@@ -153,7 +210,7 @@ def p2m_connections():
             },
         },
         {
-            "agent_connection_id": 4,
+            "agent_connection_group_id": 4,
             "agent_1": {
                 "agent_id": 1,
                 "agent_name": "auto gen 1",
@@ -164,7 +221,7 @@ def p2m_connections():
             },
         },
         {
-            "agent_connection_id": 5,
+            "agent_connection_group_id": 5,
             "agent_1": {
                 "agent_id": 1,
                 "agent_name": "auto gen 1",
@@ -181,7 +238,7 @@ def p2m_connections():
 def mesh_connections():
     return [
         {
-            "agent_connection_id": 6,
+            "agent_connection_group_id": 6,
             "agent_1": {
                 "agent_id": 13,
                 "agent_name": "iot_mqtt",
@@ -192,7 +249,7 @@ def mesh_connections():
             },
         },
         {
-            "agent_connection_id": 7,
+            "agent_connection_group_id": 7,
             "agent_1": {
                 "agent_id": 13,
                 "agent_name": "iot_mqtt",
@@ -203,7 +260,7 @@ def mesh_connections():
             },
         },
         {
-            "agent_connection_id": 8,
+            "agent_connection_group_id": 8,
             "agent_1": {
                 "agent_id": 13,
                 "agent_name": "iot_mqtt",
@@ -214,7 +271,7 @@ def mesh_connections():
             },
         },
         {
-            "agent_connection_id": 9,
+            "agent_connection_group_id": 9,
             "agent_1": {
                 "agent_id": 13,
                 "agent_name": "iot_mqtt",
@@ -225,7 +282,7 @@ def mesh_connections():
             },
         },
         {
-            "agent_connection_id": 10,
+            "agent_connection_group_id": 10,
             "agent_1": {
                 "agent_id": 10,
                 "agent_name": "iot_device1",
@@ -242,7 +299,7 @@ def mesh_connections():
 def created_connections():
     return [
         {
-            "agent_connection_id": 10,
+            "agent_connection_group_id": 10,
             "agent_1": {
                 "agent_id": 13,
                 "agent_name": "iot_mqtt",
@@ -253,7 +310,7 @@ def created_connections():
             },
         },
         {
-            "agent_connection_id": 7,
+            "agent_connection_group_id": 7,
             "agent_1": {
                 "agent_id": 13,
                 "agent_name": "iot_mqtt",
@@ -264,7 +321,7 @@ def created_connections():
             },
         },
         {
-            "agent_connection_id": 8,
+            "agent_connection_group_id": 8,
             "agent_1": {
                 "agent_id": 13,
                 "agent_name": "iot_mqtt",
@@ -402,7 +459,7 @@ def agent_connection_subnets_2():
 @pytest.fixture
 def connection_services():
     return {
-        "agent_connection_id": 169,
+        "agent_connection_group_id": 169,
         "agent_connection_subnets": [],
         "agent_1": {
             "agent_id": 9,
@@ -494,12 +551,12 @@ def p2p_connection_services(
     return [
         {
             **connection_services,
-            "agent_connection_id": 1,
+            "agent_connection_group_id": 1,
             "agent_connection_subnets": agent_connection_subnets_1,
         },
         {
             **connection_services,
-            "agent_connection_id": 2,
+            "agent_connection_group_id": 2,
             "agent_connection_subnets": agent_connection_subnets_2,
         },
     ]
@@ -577,7 +634,7 @@ def connection_services_stub(
             "data": [
                 {
                     **connection_services,
-                    "agent_connection_id": id,
+                    "agent_connection_group_id": id,
                     "agent_connection_subnets": agent_connection_subnets_2
                     if id % 2
                     else agent_connection_subnets_1,

@@ -10,31 +10,31 @@ from syntropynac.fields import ConfigFields, PeerState, PeerType, Topology
 def get_agents_connections(api, agents):
     ids = list(agents.keys())
     connections = sdk.utils.BatchedRequestFilter(
-        api.platform_connection_index,
+        sdk.ConnectionsApi(api).platform_connection_groups_index,
         max_query_size=MAX_QUERY_FIELD_SIZE,
         filter_name="agent_ids",
         filter_data=ids,
-    )(take=sdk.utils.TAKE_MAX_ITEMS_PER_CALL,)["data"]
+    )(_preload_content=False)["data"]
     return connections
 
 
 def export_connections(api, all_agents, network, net_agents, connections, topology):
     topology = Topology.P2M if not topology else topology.upper()
-    ids = [connection["agent_connection_id"] for connection in connections]
+    ids = [connection["agent_connection_group_id"] for connection in connections]
     if ids:
         connections_services = sdk.utils.BatchedRequestQuery(
-            api.platform_connection_service_show,
+            sdk.ServicesApi(api).platform_connection_service_show,
             max_query_size=sdk.utils.MAX_QUERY_FIELD_SIZE,
-        )(ids)["data"]
+        )(ids, _preload_content=False)["data"]
         connection_services = {
-            connection["agent_connection_id"]: connection
+            connection["agent_connection_group_id"]: connection
             for connection in connections_services
         }
     net_connections = [
         {
             **connection,
             "agent_connection_services": connection_services.get(
-                connection["agent_connection_id"], {}
+                connection["agent_connection_group_id"], {}
             ),
         }
         for connection in connections
@@ -62,9 +62,9 @@ def export_connections(api, all_agents, network, net_agents, connections, topolo
 
     if unused_endpoints:
         agents_services = sdk.utils.BatchedRequestQuery(
-            api.platform_agent_service_index,
+            sdk.ServicesApi(api).platform_agent_service_index,
             max_query_size=sdk.utils.MAX_QUERY_FIELD_SIZE,
-        )(unused_endpoints)["data"]
+        )(unused_endpoints, _preload_content=False)["data"]
         agent_services = defaultdict(list)
         for agent in agents_services:
             agent_services[agent["agent_id"]].append(agent)

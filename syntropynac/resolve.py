@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from itertools import combinations
 
 import click
+import syntropy_sdk as sdk
 from syntropy_sdk import utils
 
 from syntropynac.exceptions import ConfigureNetworkError
@@ -58,16 +59,16 @@ class ConnectionServices:
 def resolve_agent_by_name(api, name, silent=False):
     return [
         agent["agent_id"]
-        for agent in utils.WithRetry(api.platform_agent_index)(filter=f"name:'{name}'")[
-            "data"
-        ]
+        for agent in utils.WithPagination(sdk.AgentsApi(api).platform_agent_index)(
+            filter=f"name:'{name}'", _preload_content=False
+        )["data"]
     ]
 
 
 @functools.lru_cache(maxsize=None)
 def get_all_agents(api, silent=False):
-    all_agents = utils.WithRetry(api.platform_agent_index)(
-        take=utils.TAKE_MAX_ITEMS_PER_CALL
+    all_agents = utils.WithPagination(sdk.AgentsApi(api).platform_agent_index)(
+        _preload_content=False
     )["data"]
     return {agent["agent_id"]: agent for agent in all_agents}
 
@@ -370,8 +371,9 @@ def expand_agents_tags(api, dst_dict, silent=False):
         if dst.get(ConfigFields.PEER_TYPE) != PeerType.TAG:
             continue
 
-        agents = utils.WithRetry(api.platform_agent_index)(
-            filter=f"tags_names[]:{name}", take=utils.TAKE_MAX_ITEMS_PER_CALL
+        agents = utils.WithPagination(sdk.AgentsApi(api).platform_agent_index)(
+            filter=f"tags_names[]:{name}",
+            _preload_content=False,
         )["data"]
         if not agents:
             error = f"Could not find endpoints by the tag {name}"

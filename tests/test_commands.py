@@ -75,18 +75,18 @@ def test_configure_networks__dry_run(runner, test_yaml, config_mock, login_mock)
 
 def test_export_networks(
     runner,
-    api,
+    api_agents,
+    api_connections,
+    api_services,
+    with_pagination,
+    with_batched,
     login_mock,
 ):
-    with mock.patch(
-        "syntropynac.decorators.sdk.PlatformApi", autospec=True
-    ) as the_mock:
-        the_mock.return_value = api
-        result = runner.invoke(ctl.export)
-        assert "connections" in result.output
-        assert "P2M" in result.output
-        assert "topology" in result.output
-        assert "state" in result.output
-        assert "present" in result.output
-        assert "endpoints" in result.output
-        assert "nats-streaming" in result.output
+    result = runner.invoke(ctl.export)
+    assert "connections" in result.output
+    assert "P2M" in result.output
+    assert "topology" in result.output
+    assert "state" in result.output
+    assert "present" in result.output
+    assert "endpoints" in result.output
+    assert "nats-streaming" in result.output

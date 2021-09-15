@@ -7,7 +7,7 @@ import yaml
 
 from syntropynac import configure as configure_module
 from syntropynac import fields, transform, utils
-from syntropynac.decorators import syntropy_platform
+from syntropynac.decorators import syntropy_api
 
 
 @click.group()
@@ -31,8 +31,8 @@ def apis():
     default=False,
     help="Imports configuration from JSON instead of YAML.",
 )
-@syntropy_platform
-def configure(config, dry_run, from_json, platform):
+@syntropy_api
+def configure(config, dry_run, from_json, api):
     """Configure connections using a configuration YAML/JSON file.
 
     \b
@@ -82,7 +82,7 @@ def configure(config, dry_run, from_json, platform):
                 fg="yellow",
             )
             continue
-        configure_module.configure_network(platform, net, dry_run)
+        configure_module.configure_network(api, net, dry_run)
 
     click.secho("Done", fg="green")
 
@@ -97,18 +97,18 @@ def configure(config, dry_run, from_json, platform):
     default=False,
     help="Outputs a JSON instead of YAML.",
 )
-@syntropy_platform
-def export(topology, to_json, platform):
+@syntropy_api
+def export(topology, to_json, api):
     """Exports existing connections to configuration YAML/JSON file.
 
     If exact topology export is required - use P2P topology.
     """
-    all_agents = sdk.utils.WithRetry(platform.platform_agent_index)(
-        take=sdk.utils.TAKE_MAX_ITEMS_PER_CALL
+    all_agents = sdk.utils.WithPagination(sdk.AgentsApi(api).platform_agent_index)(
+        _preload_content=False
     )["data"]
     all_agents = {agent["agent_id"]: agent for agent in all_agents}
 
-    network = utils.export_network(platform, all_agents, topology)
+    network = utils.export_network(api, all_agents, topology)
     if to_json:
         click.echo(json.dumps(network, indent=4))
     else:

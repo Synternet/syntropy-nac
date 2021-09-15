@@ -7,17 +7,27 @@ from syntropynac import exceptions, resolve
 
 
 @pytest.fixture
-def api(platform_agent_index_stub, connection_services_stub):
-    api = mock.Mock(spec=sdk.PlatformApi)
-    api.platform_agent_index = mock.Mock(
-        spec=sdk.PlatformApi.platform_agent_index,
+def api_agents(platform_agent_index_stub):
+    with mock.patch.object(
+        sdk.AgentsApi,
+        "platform_agent_index",
+        autospec=True,
         side_effect=platform_agent_index_stub,
-    )
-    api.platform_connection_service_show = mock.Mock(
-        spec=sdk.PlatformApi.platform_connection_service_show,
+    ):
+        yield
+
+
+@pytest.fixture
+def api_services(
+    connection_services_stub,
+):
+    with mock.patch.object(
+        sdk.ServicesApi,
+        "platform_connection_service_show",
+        autospec=True,
         side_effect=connection_services_stub,
-    )
-    return api
+    ):
+        yield
 
 
 def test_resolve_present_absent(config_connections):
@@ -90,14 +100,14 @@ def test_resolve_present_absent__bad_services():
         resolve.resolve_present_absent(agents, present, absent)
 
 
-def test_expand_agents_tags__present(api):
+def test_expand_agents_tags__present(api_agents, with_pagination):
     config = {
         "test": {
             "type": "tag",
             "state": "present",
         },
     }
-    assert resolve.expand_agents_tags(api, config) == {
+    assert resolve.expand_agents_tags(mock.Mock(spec=sdk.ApiClient), config) == {
         "filter - tags_names[]:test 0": {
             "type": "endpoint",
             "state": "present",
@@ -174,7 +184,7 @@ def test_validate_connections__success(connections):
     assert resolve.validate_connections(connections)
 
 
-def test_expand_agents_tags__present_services(api):
+def test_expand_agents_tags__present_services(api_agents, with_pagination):
     config = {
         "test": {
             "type": "tag",
@@ -182,7 +192,7 @@ def test_expand_agents_tags__present_services(api):
             "services": ["a", "b"],
         },
     }
-    assert resolve.expand_agents_tags(api, config) == {
+    assert resolve.expand_agents_tags(mock.Mock(spec=sdk.ApiClient), config) == {
         "filter - tags_names[]:test 0": {
             "type": "endpoint",
             "state": "present",
@@ -204,7 +214,7 @@ def test_expand_agents_tags__present_services(api):
     }
 
 
-def test_expand_agents_tags__except_one(api):
+def test_expand_agents_tags__except_one(api_agents, with_pagination):
     config = {
         "test": {
             "type": "tag",
@@ -217,7 +227,7 @@ def test_expand_agents_tags__except_one(api):
             "services": ["c", "d"],
         },
     }
-    assert resolve.expand_agents_tags(api, config) == {
+    assert resolve.expand_agents_tags(mock.Mock(spec=sdk.ApiClient), config) == {
         "filter - tags_names[]:test 0": {
             "type": "endpoint",
             "state": "present",
@@ -238,7 +248,7 @@ def test_expand_agents_tags__except_one(api):
     }
 
 
-def test_expand_agents_tags__except_tag(api):
+def test_expand_agents_tags__except_tag(api_agents, with_pagination):
     config = {
         "test": {
             "type": "tag",
@@ -252,7 +262,9 @@ def test_expand_agents_tags__except_tag(api):
         },
     }
 
-    def platform_agent_index(filter=None, take=None):
+    def platform_agent_index(
+        _, filter=None, take=None, skip=None, _preload_content=None
+    ):
         if "test1" in filter:
             return {
                 "data": [
@@ -274,8 +286,8 @@ def test_expand_agents_tags__except_tag(api):
                 ]
             }
 
-    api.platform_agent_index.side_effect = platform_agent_index
-    assert resolve.expand_agents_tags(api, config) == {
+    sdk.AgentsApi.platform_agent_index.side_effect = platform_agent_index
+    assert resolve.expand_agents_tags(mock.Mock(spec=sdk.ApiClient), config) == {
         "test 0": {
             "type": "endpoint",
             "state": "absent",
@@ -309,7 +321,7 @@ def test_expand_agents_tags__except_tag(api):
     }
 
 
-def test_resolve_p2p_connections(api):
+def test_resolve_p2p_connections(api_connections, api_agents, with_pagination):
     connections = {
         "agent1": {
             "connect_to": {
@@ -322,7 +334,9 @@ def test_resolve_p2p_connections(api):
         "agent4": {"state": "absent", "connect_to": {"agent1": {}}},
         "2": {"type": "id", "connect_to": {"agent4": {"state": "absent"}}},
     }
-    assert resolve.resolve_p2p_connections(api, connections) == (
+    assert resolve.resolve_p2p_connections(
+        mock.Mock(spec=sdk.ApiClient), connections
+    ) == (
         [[1, 2], [3, 4]],
         [[4, 1], [2, 4]],
         [
@@ -332,7 +346,7 @@ def test_resolve_p2p_connections(api):
     )
 
 
-def test_resolve_p2m_connections(api):
+def test_resolve_p2m_connections(api_connections, api_agents, with_pagination):
     connections = {
         "agent1": {
             "connect_to": {
@@ -351,7 +365,9 @@ def test_resolve_p2m_connections(api):
             },
         },
     }
-    assert resolve.resolve_p2m_connections(api, connections) == (
+    assert resolve.resolve_p2m_connections(
+        mock.Mock(spec=sdk.ApiClient), connections
+    ) == (
         [[1, 2], [1, 3]],
         [[1, 4], [2, 5], [2, 6]],
         [
@@ -361,7 +377,7 @@ def test_resolve_p2m_connections(api):
     )
 
 
-def test_resolve_p2m_connections__tags(api):
+def test_resolve_p2m_connections__tags(api_connections, api_agents, with_pagination):
     connections = {
         "agent1": {
             "connect_to": {
@@ -375,7 +391,9 @@ def test_resolve_p2m_connections__tags(api):
             }
         },
     }
-    assert resolve.resolve_p2m_connections(api, connections) == (
+    assert resolve.resolve_p2m_connections(
+        mock.Mock(spec=sdk.ApiClient), connections
+    ) == (
         [[1, 160], [1, 161], [1, 162]],
         [[2, 170], [2, 171], [2, 172]],
         [
@@ -386,7 +404,9 @@ def test_resolve_p2m_connections__tags(api):
     )
 
 
-def test_resolve_p2m_connections__tags_not_found(api):
+def test_resolve_p2m_connections__tags_not_found(
+    api_connections, api_agents, with_pagination
+):
     connections = {
         "agent1": {
             "connect_to": {
@@ -402,7 +422,9 @@ def test_resolve_p2m_connections__tags_not_found(api):
     with mock.patch(
         "syntropynac.resolve.expand_agents_tags", autospec=True, return_value=None
     ) as the_mock:
-        assert resolve.resolve_p2m_connections(api, connections) == (
+        assert resolve.resolve_p2m_connections(
+            mock.Mock(spec=sdk.ApiClient), connections
+        ) == (
             [],
             [],
             [],
@@ -410,14 +432,16 @@ def test_resolve_p2m_connections__tags_not_found(api):
         the_mock.assert_called_once()
 
 
-def test_resolve_mesh_connections(api):
+def test_resolve_mesh_connections(api_connections, api_agents, with_pagination):
     connections = {
         "agent1": {"services": "a"},
         "agent2": {"services": "b"},
         "3": {"type": "id", "services": "c"},
         "agent4": {"state": "absent"},
     }
-    assert resolve.resolve_mesh_connections(api, connections) == (
+    assert resolve.resolve_mesh_connections(
+        mock.Mock(spec=sdk.ApiClient), connections
+    ) == (
         [[1, 2], [1, 3], [2, 3]],
         [[1, 4], [2, 4], [3, 4]],
         [
@@ -428,12 +452,14 @@ def test_resolve_mesh_connections(api):
     )
 
 
-def test_resolve_mesh_connections__tag(api):
+def test_resolve_mesh_connections__tag(api_connections, api_agents, with_pagination):
     connections = {
         "tag1": {"type": "tag"},
         "iot": {"type": "tag"},
     }
-    assert resolve.resolve_mesh_connections(api, connections) == (
+    assert resolve.resolve_mesh_connections(
+        mock.Mock(spec=sdk.ApiClient), connections
+    ) == (
         [
             [170, 171],
             [170, 172],
@@ -456,7 +482,7 @@ def test_resolve_mesh_connections__tag(api):
     )
 
 
-def test_resolve_mesh_connections__tags_not_found(api):
+def test_resolve_mesh_connections__tags_not_found(api_connections):
     connections = {
         "tag1": {"type": "tag"},
         "iot": {"type": "tag"},
@@ -464,7 +490,9 @@ def test_resolve_mesh_connections__tags_not_found(api):
     with mock.patch(
         "syntropynac.resolve.expand_agents_tags", autospec=True, return_value=None
     ) as the_mock:
-        assert resolve.resolve_mesh_connections(api, connections) == (
+        assert resolve.resolve_mesh_connections(
+            mock.Mock(spec=sdk.ApiClient), connections
+        ) == (
             [],
             [],
             [],
