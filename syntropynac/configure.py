@@ -86,7 +86,7 @@ def configure_connection(api, config, connection, silent=False):
         return 0
 
     body = {
-        "connectionId": connection["agent_connection_group_id"],
+        "connectionGroupId": connection["agent_connection_group_id"],
         "changes": changes,
     }
     utils.BatchedRequestBody(
