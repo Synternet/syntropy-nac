@@ -244,7 +244,7 @@ def test_configure_connection(
     ] == mock.call(
         mock.ANY,
         body={
-            "connectionId": 169,
+            "connectionGroupId": 169,
             "changes": [
                 {"agentServiceSubnetId": id, "isEnabled": en} for id, en in result
             ],
