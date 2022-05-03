@@ -7,23 +7,12 @@ from syntropynac import exceptions, resolve
 
 
 @pytest.fixture
-def api_agents(platform_agent_index_stub):
-    with mock.patch.object(
-        sdk.AgentsApi,
-        "platform_agent_index",
-        autospec=True,
-        side_effect=platform_agent_index_stub,
-    ):
-        yield
-
-
-@pytest.fixture
 def api_services(
     connection_services_stub,
 ):
     with mock.patch.object(
-        sdk.ServicesApi,
-        "platform_connection_service_show",
+        sdk.ConnectionsApi,
+        "v1_network_connections_services_get",
         autospec=True,
         side_effect=connection_services_stub,
     ):
@@ -100,7 +89,7 @@ def test_resolve_present_absent__bad_services():
         resolve.resolve_present_absent(agents, present, absent)
 
 
-def test_expand_agents_tags__present(api_agents, with_pagination):
+def test_expand_agents_tags__present(api_agents_search, with_pagination):
     config = {
         "test": {
             "type": "tag",
@@ -108,23 +97,23 @@ def test_expand_agents_tags__present(api_agents, with_pagination):
         },
     }
     assert resolve.expand_agents_tags(mock.Mock(spec=sdk.ApiClient), config) == {
-        "filter - tags_names[]:test 0": {
-            "type": "endpoint",
-            "state": "present",
-            "id": 170,
+        "filter - test 0": {
+            "id": 40,
             "services": None,
+            "state": "present",
+            "type": "endpoint",
         },
-        "filter - tags_names[]:test 1": {
-            "type": "endpoint",
-            "state": "present",
-            "id": 171,
+        "filter - test 1": {
+            "id": 41,
             "services": None,
+            "state": "present",
+            "type": "endpoint",
         },
-        "filter - tags_names[]:test 2": {
-            "type": "endpoint",
-            "state": "present",
-            "id": 172,
+        "filter - test 2": {
+            "id": 42,
             "services": None,
+            "state": "present",
+            "type": "endpoint",
         },
     }
 
@@ -184,7 +173,7 @@ def test_validate_connections__success(connections):
     assert resolve.validate_connections(connections)
 
 
-def test_expand_agents_tags__present_services(api_agents, with_pagination):
+def test_expand_agents_tags__present_services(api_agents_search, with_pagination):
     config = {
         "test": {
             "type": "tag",
@@ -193,62 +182,68 @@ def test_expand_agents_tags__present_services(api_agents, with_pagination):
         },
     }
     assert resolve.expand_agents_tags(mock.Mock(spec=sdk.ApiClient), config) == {
-        "filter - tags_names[]:test 0": {
-            "type": "endpoint",
-            "state": "present",
-            "id": 170,
+        "filter - test 0": {
+            "id": 40,
             "services": ["a", "b"],
+            "state": "present",
+            "type": "endpoint",
         },
-        "filter - tags_names[]:test 1": {
-            "type": "endpoint",
-            "state": "present",
-            "id": 171,
+        "filter - test 1": {
+            "id": 41,
             "services": ["a", "b"],
+            "state": "present",
+            "type": "endpoint",
         },
-        "filter - tags_names[]:test 2": {
-            "type": "endpoint",
-            "state": "present",
-            "id": 172,
+        "filter - test 2": {
+            "id": 42,
             "services": ["a", "b"],
+            "state": "present",
+            "type": "endpoint",
         },
     }
 
 
-def test_expand_agents_tags__except_one(api_agents, with_pagination):
+def test_expand_agents_tags__except_one(api_agents_search, with_pagination):
     config = {
         "test": {
             "type": "tag",
             "state": "present",
             "services": ["a", "b"],
         },
-        "filter - tags_names[]:test 1": {
+        "filter - test 1": {
             "type": "endpoint",
             "state": "absent",
             "services": ["c", "d"],
         },
     }
     assert resolve.expand_agents_tags(mock.Mock(spec=sdk.ApiClient), config) == {
-        "filter - tags_names[]:test 0": {
+        "filter - test 0": {
             "type": "endpoint",
             "state": "present",
             "services": ["a", "b"],
-            "id": 170,
+            "id": 10,
         },
-        "filter - tags_names[]:test 1": {
+        "filter - test 0": {
+            "id": 40,
+            "services": ["a", "b"],
+            "state": "present",
             "type": "endpoint",
-            "state": "absent",
+        },
+        "filter - test 1": {
             "services": ["c", "d"],
-        },
-        "filter - tags_names[]:test 2": {
+            "state": "absent",
             "type": "endpoint",
-            "state": "present",
+        },
+        "filter - test 2": {
+            "id": 42,
             "services": ["a", "b"],
-            "id": 172,
+            "state": "present",
+            "type": "endpoint",
         },
     }
 
 
-def test_expand_agents_tags__except_tag(api_agents, with_pagination):
+def test_expand_agents_tags__except_tag(api_agents_search, with_pagination):
     config = {
         "test": {
             "type": "tag",
@@ -286,42 +281,48 @@ def test_expand_agents_tags__except_tag(api_agents, with_pagination):
                 ]
             }
 
-    sdk.AgentsApi.platform_agent_index.side_effect = platform_agent_index
+    sdk.AgentsApi.v1_network_agents_get.side_effect = platform_agent_index
     assert resolve.expand_agents_tags(mock.Mock(spec=sdk.ApiClient), config) == {
-        "test 0": {
-            "type": "endpoint",
-            "state": "absent",
-            "id": 0,
-            "services": ["c", "d"],
-        },
-        "test 1": {
-            "type": "endpoint",
-            "state": "absent",
-            "id": 1,
-            "services": ["c", "d"],
-        },
-        "test 2": {
-            "type": "endpoint",
-            "state": "absent",
-            "id": 2,
-            "services": ["c", "d"],
-        },
-        "test 3": {
-            "type": "endpoint",
-            "state": "present",
-            "id": 3,
+        "filter - test 0": {
+            "id": 40,
             "services": ["a", "b"],
-        },
-        "test 4": {
-            "type": "endpoint",
             "state": "present",
-            "id": 4,
+            "type": "endpoint",
+        },
+        "filter - test 1": {
+            "id": 41,
             "services": ["a", "b"],
+            "state": "present",
+            "type": "endpoint",
+        },
+        "filter - test 2": {
+            "id": 42,
+            "services": ["a", "b"],
+            "state": "present",
+            "type": "endpoint",
+        },
+        "filter - test1 0": {
+            "id": 50,
+            "services": ["c", "d"],
+            "state": "absent",
+            "type": "endpoint",
+        },
+        "filter - test1 1": {
+            "id": 51,
+            "services": ["c", "d"],
+            "state": "absent",
+            "type": "endpoint",
+        },
+        "filter - test1 2": {
+            "id": 52,
+            "services": ["c", "d"],
+            "state": "absent",
+            "type": "endpoint",
         },
     }
 
 
-def test_resolve_p2p_connections(api_connections, api_agents, with_pagination):
+def test_resolve_p2p_connections(api_connections, api_agents_search, with_pagination):
     connections = {
         "agent1": {
             "connect_to": {
@@ -346,7 +347,7 @@ def test_resolve_p2p_connections(api_connections, api_agents, with_pagination):
     )
 
 
-def test_resolve_p2m_connections(api_connections, api_agents, with_pagination):
+def test_resolve_p2m_connections(api_connections, api_agents_search, with_pagination):
     connections = {
         "agent1": {
             "connect_to": {
@@ -377,7 +378,9 @@ def test_resolve_p2m_connections(api_connections, api_agents, with_pagination):
     )
 
 
-def test_resolve_p2m_connections__tags(api_connections, api_agents, with_pagination):
+def test_resolve_p2m_connections__tags(
+    api_connections, api_agents_search, with_pagination
+):
     connections = {
         "agent1": {
             "connect_to": {
@@ -394,18 +397,18 @@ def test_resolve_p2m_connections__tags(api_connections, api_agents, with_paginat
     assert resolve.resolve_p2m_connections(
         mock.Mock(spec=sdk.ApiClient), connections
     ) == (
-        [[1, 160], [1, 161], [1, 162]],
-        [[2, 170], [2, 171], [2, 172]],
+        [[1, 30], [1, 31], [1, 32]],
+        [[2, 40], [2, 41], [2, 42]],
         [
-            resolve.ConnectionServices(1, 160, ["nginx"], ["a", "b"]),
-            resolve.ConnectionServices(1, 161, ["nginx"], ["a", "b"]),
-            resolve.ConnectionServices(1, 162, ["nginx"], ["a", "b"]),
+            resolve.ConnectionServices(1, 30, ["nginx"], ["a", "b"]),
+            resolve.ConnectionServices(1, 31, ["nginx"], ["a", "b"]),
+            resolve.ConnectionServices(1, 32, ["nginx"], ["a", "b"]),
         ],
     )
 
 
 def test_resolve_p2m_connections__tags_not_found(
-    api_connections, api_agents, with_pagination
+    api_connections, api_agents_search, with_pagination
 ):
     connections = {
         "agent1": {
@@ -432,7 +435,7 @@ def test_resolve_p2m_connections__tags_not_found(
         the_mock.assert_called_once()
 
 
-def test_resolve_mesh_connections(api_connections, api_agents, with_pagination):
+def test_resolve_mesh_connections(api_connections, api_agents_search, with_pagination):
     connections = {
         "agent1": {"services": "a"},
         "agent2": {"services": "b"},
@@ -452,7 +455,9 @@ def test_resolve_mesh_connections(api_connections, api_agents, with_pagination):
     )
 
 
-def test_resolve_mesh_connections__tag(api_connections, api_agents, with_pagination):
+def test_resolve_mesh_connections__tag(
+    api_connections, api_agents_search, with_pagination
+):
     connections = {
         "tag1": {"type": "tag"},
         "iot": {"type": "tag"},
@@ -461,21 +466,21 @@ def test_resolve_mesh_connections__tag(api_connections, api_agents, with_paginat
         mock.Mock(spec=sdk.ApiClient), connections
     ) == (
         [
-            [170, 171],
-            [170, 172],
-            [170, 160],
-            [170, 161],
-            [170, 162],
-            [171, 172],
-            [171, 160],
-            [171, 161],
-            [171, 162],
-            [172, 160],
-            [172, 161],
-            [172, 162],
-            [160, 161],
-            [160, 162],
-            [161, 162],
+            [40, 41],
+            [40, 42],
+            [40, 30],
+            [40, 31],
+            [40, 32],
+            [41, 42],
+            [41, 30],
+            [41, 31],
+            [41, 32],
+            [42, 30],
+            [42, 31],
+            [42, 32],
+            [30, 31],
+            [30, 32],
+            [31, 32],
         ],
         [],
         mock.ANY,

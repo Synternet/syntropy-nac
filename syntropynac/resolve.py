@@ -4,7 +4,7 @@ from itertools import combinations
 
 import click
 import syntropy_sdk as sdk
-from syntropy_sdk import utils
+from syntropy_sdk import models, utils
 
 from syntropynac.exceptions import ConfigureNetworkError
 from syntropynac.fields import ALLOWED_PEER_TYPES, ConfigFields, PeerState, PeerType
@@ -57,20 +57,23 @@ class ConnectionServices:
 
 @functools.lru_cache(maxsize=None)
 def resolve_agent_by_name(api, name, silent=False):
-    return [
-        agent["agent_id"]
-        for agent in utils.WithPagination(sdk.AgentsApi(api).platform_agent_index)(
-            filter=f"name:'{name}'", _preload_content=False
-        )["data"]
-    ]
+    agents = sdk.AgentsApi(api).v1_network_agents_search(
+        models.V1NetworkAgentsSearchRequest(
+            filter=models.V1AgentFilter(agent_name=name),
+        ),
+        _preload_content=False,
+    )["data"]
+
+    return [agent["agent_id"] for agent in agents]
 
 
 @functools.lru_cache(maxsize=None)
 def get_all_agents(api, silent=False):
-    all_agents = utils.WithPagination(sdk.AgentsApi(api).platform_agent_index)(
-        _preload_content=False
+    agents = sdk.utils.WithPagination(sdk.AgentsApi(api).v1_network_agents_get)(
+        _preload_content=False,
     )["data"]
-    return {agent["agent_id"]: agent for agent in all_agents}
+
+    return {agent["agent_id"]: agent for agent in agents}
 
 
 def resolve_agents(api, agents, silent=False):
@@ -371,10 +374,13 @@ def expand_agents_tags(api, dst_dict, silent=False):
         if dst.get(ConfigFields.PEER_TYPE) != PeerType.TAG:
             continue
 
-        agents = utils.WithPagination(sdk.AgentsApi(api).platform_agent_index)(
-            filter=f"tags_names[]:{name}",
+        agents = sdk.AgentsApi(api).v1_network_agents_search(
+            models.V1NetworkAgentsSearchRequest(
+                filter=models.V1AgentFilter(agent_tag_name=[name]),
+            ),
             _preload_content=False,
         )["data"]
+
         if not agents:
             error = f"Could not find endpoints by the tag {name}"
             if not silent:

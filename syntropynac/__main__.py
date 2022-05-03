@@ -103,7 +103,7 @@ def export(topology, to_json, api):
 
     If exact topology export is required - use P2P topology.
     """
-    all_agents = sdk.utils.WithPagination(sdk.AgentsApi(api).platform_agent_index)(
+    all_agents = sdk.utils.WithPagination(sdk.AgentsApi(api).v1_network_agents_get)(
         _preload_content=False
     )["data"]
     all_agents = {agent["agent_id"]: agent for agent in all_agents}

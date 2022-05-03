@@ -1,7 +1,6 @@
 from collections import defaultdict
 
 import click
-import syntropy_sdk as sdk
 
 from syntropynac.exceptions import ConfigureNetworkError
 from syntropynac.fields import ConfigFields, PeerState, PeerType, Topology

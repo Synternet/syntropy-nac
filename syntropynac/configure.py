@@ -1,6 +1,6 @@
 import click
 import syntropy_sdk as sdk
-from syntropy_sdk import utils
+from syntropy_sdk import models, utils
 
 from syntropynac import resolve, transform
 from syntropynac.exceptions import ConfigureNetworkError
@@ -8,18 +8,21 @@ from syntropynac.fields import ALLOWED_TOPOLOGIES, ConfigFields, PeerState, Topo
 
 
 def create_connections(api, peers, silent=False):
-    body = {
-        "agent_ids": [{"agent_1_id": a, "agent_2_id": b} for a, b in peers],
-    }
-
-    utils.BatchedRequestBody(
-        sdk.ConnectionsApi(api).platform_connection_create_p2p,
-        translator=utils._default_translator("agent_ids"),
-        max_payload_size=utils.MAX_PAYLOAD_SIZE,
-    )(body=body)
+    body = models.V1NetworkConnectionsCreateP2PRequest(
+        agent_pairs=[
+            models.V1NetworkConnectionsCreateP2PRequestAgentPairs(
+                agent_1_id=a,
+                agent_2_id=b,
+            )
+            for a, b in peers
+        ],
+    )
+    sdk.ConnectionsApi(api).v1_network_connections_create_p2_p(
+        body=body, _preload_content=False
+    )
 
     connections = utils.WithPagination(
-        sdk.ConnectionsApi(api).platform_connection_groups_index
+        sdk.ConnectionsApi(api).v1_network_connections_get
     )(_preload_content=False)["data"]
 
     frozen_peers = [frozenset(peer) for peer in peers]
@@ -36,19 +39,29 @@ def create_connections(api, peers, silent=False):
 
 
 def delete_connections(api, absent):
-    body = [
-        {
-            "agent_1_id": a,
-            "agent_2_id": b,
-        }
-        for a, b in absent
+    connections = utils.WithPagination(
+        sdk.ConnectionsApi(api).v1_network_connections_search
+    )(
+        body=models.V1NetworkConnectionsSearchRequest(
+            filter=models.V1ConnectionFilter(
+                agent_pair=[
+                    models.V1AgentPairFilter(agent_1_id=a, agent_2_id=b)
+                    for a, b in absent
+                ]
+            )
+        ),
+        _preload_content=False,
+    )[
+        "data"
     ]
 
-    utils.BatchedRequestBody(
-        sdk.ConnectionsApi(api).platform_connections_destroy_deprecated,
-        translator=lambda body, data: body[:] if data is None else data[:],
-        max_payload_size=utils.MAX_PAYLOAD_SIZE,
-    )(body=body)
+    sdk.ConnectionsApi(api).v1_network_connections_remove(
+        body=models.V1NetworkConnectionsRemoveRequest(
+            agent_connection_group_ids=[
+                conn["agent_connection_group_id"] for conn in connections
+            ],
+        ),
+    )
 
 
 def configure_connection(api, config, connection, silent=False):
@@ -65,19 +78,19 @@ def configure_connection(api, config, connection, silent=False):
 
     # First collect all the changes to the original configured subnets
     changes = [
-        {
-            "agentServiceSubnetId": id,
-            "isEnabled": id in enabled_subnets,
-        }
+        models.AgentServicesUpdateChanges(
+            agent_service_subnet_id=id,
+            is_enabled=id in enabled_subnets,
+        )
         for id, enabled in current_subnets.items()
         if (id in enabled_subnets) != enabled
     ]
     # Then configure any missing subnets
     changes += [
-        {
-            "agentServiceSubnetId": id,
-            "isEnabled": True,
-        }
+        models.AgentServicesUpdateChanges(
+            agent_service_subnet_id=id,
+            is_enabled=True,
+        )
         for id in enabled_subnets
         if id not in current_subnets
     ]
@@ -85,15 +98,11 @@ def configure_connection(api, config, connection, silent=False):
     if not changes:
         return 0
 
-    body = {
-        "connectionGroupId": connection["agent_connection_group_id"],
-        "changes": changes,
-    }
-    utils.BatchedRequestBody(
-        sdk.ServicesApi(api).platform_connection_service_update,
-        max_payload_size=utils.MAX_PAYLOAD_SIZE,
-        translator=utils._default_translator("changes"),
-    )(body=body)
+    body = models.V1NetworkConnectionsServicesUpdateRequest(
+        agent_connection_group_id=connection["agent_connection_group_id"],
+        changes=changes,
+    )
+    sdk.ConnectionsApi(api).v1_network_connections_services_update(body=body)
     return len(changes)
 
 
@@ -101,10 +110,10 @@ def configure_connections(api, services_config, connections, silent=False):
     ids = [connection["agent_connection_group_id"] for connection in connections]
     if not ids:
         return 0, 0
-    connections_services = utils.BatchedRequestQuery(
-        sdk.ServicesApi(api).platform_connection_service_show,
-        max_query_size=utils.MAX_QUERY_FIELD_SIZE,
-    )(ids, _preload_content=False)["data"]
+    connections_services = utils.BatchedRequestFilter(
+        sdk.ConnectionsApi(api).v1_network_connections_services_get,
+        utils.MAX_QUERY_FIELD_SIZE,
+    )(filter=ids, _preload_content=False)["data"]
 
     # Build a map of connections so that it would be quicker to resolve them to subnets
     services_map = {}
@@ -218,7 +227,7 @@ def configure_network_update(api, config, dry_run, silent=False):
     """
     topology = config[ConfigFields.TOPOLOGY].upper()
     connections = utils.WithPagination(
-        sdk.ConnectionsApi(api).platform_connection_groups_index
+        sdk.ConnectionsApi(api).v1_network_connections_get
     )(_preload_content=False)["data"]
     all_agents = resolve.get_all_agents(api, silent)
     resolved_connections = transform.transform_connections(

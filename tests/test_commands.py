@@ -75,14 +75,14 @@ def test_configure_networks__dry_run(runner, test_yaml, config_mock, login_mock)
 
 def test_export_networks(
     runner,
-    api_agents,
+    api_agents_get,
     api_connections,
     api_services,
     with_pagination,
-    with_batched,
+    with_batched_filter,
     login_mock,
 ):
-    result = runner.invoke(ctl.export)
+    result = runner.invoke(ctl.export, catch_exceptions=False)
     assert "connections" in result.output
     assert "P2M" in result.output
     assert "topology" in result.output

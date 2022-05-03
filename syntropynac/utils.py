@@ -1,6 +1,7 @@
 from collections import defaultdict
 
 import syntropy_sdk as sdk
+from syntropy_sdk import models
 from syntropy_sdk.utils import MAX_QUERY_FIELD_SIZE
 
 from syntropynac import fields, transform
@@ -9,12 +10,12 @@ from syntropynac.fields import ConfigFields, PeerState, PeerType, Topology
 
 def get_agents_connections(api, agents):
     ids = list(agents.keys())
-    connections = sdk.utils.BatchedRequestFilter(
-        sdk.ConnectionsApi(api).platform_connection_groups_index,
-        max_query_size=MAX_QUERY_FIELD_SIZE,
-        filter_name="agent_ids",
-        filter_data=ids,
-    )(_preload_content=False)["data"]
+    connections = sdk.ConnectionsApi(api).v1_network_connections_search(
+        body=models.V1NetworkConnectionsSearchRequest(
+            filter=models.V1ConnectionFilter(agent_id=id),
+        ),
+        _preload_content=False,
+    )["data"]
     return connections
 
 
@@ -22,10 +23,11 @@ def export_connections(api, all_agents, network, net_agents, connections, topolo
     topology = Topology.P2M if not topology else topology.upper()
     ids = [connection["agent_connection_group_id"] for connection in connections]
     if ids:
-        connections_services = sdk.utils.BatchedRequestQuery(
-            sdk.ServicesApi(api).platform_connection_service_show,
-            max_query_size=sdk.utils.MAX_QUERY_FIELD_SIZE,
-        )(ids, _preload_content=False)["data"]
+        connections_services = sdk.utils.BatchedRequestFilter(
+            sdk.ConnectionsApi(api).v1_network_connections_services_get,
+            MAX_QUERY_FIELD_SIZE,
+        )(filter=ids, _preload_content=False)["data"]
+
         connection_services = {
             connection["agent_connection_group_id"]: connection
             for connection in connections_services
@@ -61,10 +63,11 @@ def export_connections(api, all_agents, network, net_agents, connections, topolo
     unused_endpoints = [id for id in net_agents if id not in used_endpoints]
 
     if unused_endpoints:
-        agents_services = sdk.utils.BatchedRequestQuery(
-            sdk.ServicesApi(api).platform_agent_service_index,
-            max_query_size=sdk.utils.MAX_QUERY_FIELD_SIZE,
-        )(unused_endpoints, _preload_content=False)["data"]
+        agents_services = sdk.utils.BatchedRequestFilter(
+            sdk.AgentsApi(api).v1_network_agents_services_get,
+            MAX_QUERY_FIELD_SIZE,
+        )(filter=unused_endpoints, _preload_content=False)["data"]
+
         agent_services = defaultdict(list)
         for agent in agents_services:
             agent_services[agent["agent_id"]].append(agent)

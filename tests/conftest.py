@@ -37,14 +37,27 @@ def runner(api_lock_fix):
 
 
 @pytest.fixture
-def api_agents(
-    platform_agent_index_stub,
+def api_agents_search(
+    platform_agent_search_stub,
 ):
     with mock.patch.object(
         sdk.AgentsApi,
-        "platform_agent_index",
+        "v1_network_agents_search",
         autospec=True,
-        side_effect=platform_agent_index_stub,
+        side_effect=platform_agent_search_stub,
+    ) as api:
+        yield api
+
+
+@pytest.fixture
+def api_agents_get(
+    platform_agent_get_stub,
+):
+    with mock.patch.object(
+        sdk.AgentsApi,
+        "v1_network_agents_get",
+        autospec=True,
+        side_effect=platform_agent_get_stub,
     ) as api:
         yield api
 
@@ -72,59 +85,104 @@ def with_batched():
 
 
 @pytest.fixture
+def with_batched_filter():
+    with mock.patch.object(
+        sdk.utils,
+        "BatchedRequestFilter",
+        autospec=True,
+        side_effect=lambda x, _: x,
+    ) as api:
+        yield api
+
+
+@pytest.fixture
 def api_connections(
     p2p_connections,
 ):
     with mock.patch.object(
         sdk.ConnectionsApi,
-        "platform_connection_groups_index",
+        "v1_network_connections_get",
         autospec=True,
         return_value={"data": p2p_connections},
     ) as api:
         with mock.patch.object(
             sdk.ConnectionsApi,
-            "platform_connection_create_p2p",
+            "v1_network_connections_search",
             autospec=True,
+            return_value={"data": p2p_connections},
         ) as api:
             with mock.patch.object(
                 sdk.ConnectionsApi,
-                "platform_connections_destroy_deprecated",
+                "v1_network_connections_create_p2_p",
                 autospec=True,
             ) as api:
-                yield api
+                with mock.patch.object(
+                    sdk.ConnectionsApi,
+                    "v1_network_connections_remove",
+                    autospec=True,
+                ) as api:
+                    yield api
 
 
 @pytest.fixture
-def api_services(
+def api_connections_services(
     p2p_connection_services,
 ):
-    def get_services(_, ids, **kwargs):
+    with mock.patch.object(
+        sdk.ConnectionsApi,
+        "v1_network_connections_get",
+        autospec=True,
+        return_value={"data": p2p_connection_services},
+    ):
+        with mock.patch.object(
+            sdk.ConnectionsApi,
+            "v1_network_connections_search",
+            autospec=True,
+            return_value={"data": p2p_connection_services},
+        ):
+            with mock.patch.object(
+                sdk.ConnectionsApi,
+                "v1_network_connections_create_p2_p",
+                autospec=True,
+            ) as api:
+                with mock.patch.object(
+                    sdk.ConnectionsApi,
+                    "v1_network_connections_remove",
+                    autospec=True,
+                ) as api:
+                    yield api
+
+
+@pytest.fixture
+def api_services(connection_services_stub):
+    def get_services(_, filter=None, **kwargs):
         return {
             "data": [
                 {
                     "agent_id": id,
                     "agent_service_name": service,
                 }
-                for id in ids
+                for id in filter
                 for service in ("nginx", "redis")
             ]
         }
 
     with mock.patch.object(
-        sdk.ServicesApi,
-        "platform_connection_service_show",
+        sdk.ConnectionsApi,
+        "v1_network_connections_services_get",
         autospec=True,
-        return_value={"data": p2p_connection_services},
+        side_effect=connection_services_stub,
+        # return_value=connection_services,
     ):
         with mock.patch.object(
-            sdk.ServicesApi,
-            "platform_agent_service_index",
+            sdk.AgentsApi,
+            "v1_network_agents_services_get",
             autospec=True,
             side_effect=get_services,
         ):
             with mock.patch.object(
-                sdk.ServicesApi,
-                "platform_connection_service_update",
+                sdk.ConnectionsApi,
+                "v1_network_connections_services_update",
                 autospec=True,
             ):
                 yield
@@ -163,8 +221,8 @@ connections:
 
 
 @pytest.fixture
-def all_agents(platform_agent_index_stub):
-    return {agent["agent_id"]: agent for agent in platform_agent_index_stub()["data"]}
+def all_agents(platform_agent_get_stub):
+    return {agent["agent_id"]: agent for agent in platform_agent_get_stub()["data"]}
 
 
 @pytest.fixture
@@ -594,32 +652,39 @@ def platform_agent_index_ex():
 
 
 @pytest.fixture
-def platform_agent_index_stub():
+def platform_agent_get_stub():
     def func(*args, **kwargs):
-        if "filter" not in kwargs:
+        return {
+            "data": [
+                {
+                    "agent_name": f"auto gen {i}",
+                    "agent_id": i,
+                    "agent_tags": [],
+                }
+                for i in range(256)
+            ]
+        }
+
+    return func
+
+
+@pytest.fixture
+def platform_agent_search_stub():
+    def func(_, body, **kwargs):
+        if body.filter.agent_name:
+            for i in range(30):
+                if f"agent{i}" in body.filter.agent_name:
+                    return {"data": [{"agent_name": f"agent{i}", "agent_id": i}]}
+        elif body.filter.agent_tag_name:
             return {
                 "data": [
                     {
-                        "agent_name": f"auto gen {i}",
-                        "agent_id": i,
-                        "agent_tags": [],
-                    }
-                    for i in range(256)
-                ]
-            }
-        elif "tags_names[]" in kwargs["filter"]:
-            return {
-                "data": [
-                    {
-                        "agent_name": f"filter - {kwargs['filter']} {i}",
-                        "agent_id": 10 * len(kwargs["filter"]) + i,
+                        "agent_name": f"filter - {body.filter.agent_tag_name[0]} {i}",
+                        "agent_id": 10 * len(body.filter.agent_tag_name[0]) + i,
                     }
                     for i in range(3)
                 ]
             }
-        for i in range(30):
-            if f"agent{i}" in kwargs["filter"]:
-                return {"data": [{"agent_name": f"agent{i}", "agent_id": i}]}
         return {"data": []}
 
     return func
@@ -629,17 +694,18 @@ def platform_agent_index_stub():
 def connection_services_stub(
     connection_services, agent_connection_subnets_1, agent_connection_subnets_2
 ):
-    def func(_, ids):
+    def func(_, filter=None, _preload_content=None):
+        print(filter)
         return {
             "data": [
                 {
                     **connection_services,
                     "agent_connection_group_id": id,
                     "agent_connection_subnets": agent_connection_subnets_2
-                    if id % 2
+                    if int(id) % 2
                     else agent_connection_subnets_1,
                 }
-                for id in ids
+                for id in filter
             ]
         }
 
