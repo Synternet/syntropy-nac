@@ -22,18 +22,24 @@ dataclasses==0.6
     # via -r requirements.txt
 distlib==0.3.2
     # via virtualenv
-filelock==3.0.12
-    # via virtualenv
-identify==2.2.14
-    # via pre-commit
+filelock==3.4.1
+    # via
+    #   -r dev-requirements.in
+    #   virtualenv
+identify==2.4.4
+    # via
+    #   -r dev-requirements.in
+    #   pre-commit
 iniconfig==1.1.1
     # via pytest
 nodeenv==1.6.0
     # via pre-commit
 packaging==21.0
     # via pytest
-platformdirs==2.3.0
-    # via virtualenv
+platformdirs==2.4.0
+    # via
+    #   -r dev-requirements.in
+    #   virtualenv
 pluggy==1.0.0
     # via
     #   -r dev-requirements.in
