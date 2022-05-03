@@ -24,7 +24,7 @@ def test_yaml(runner, test_yaml):
 
 
 def test_configure_networks(runner, test_yaml, config_mock, login_mock):
-    print(runner.invoke(ctl.configure, ["test.yaml"]))
+    runner.invoke(ctl.configure, ["test.yaml"], catch_exceptions=False)
     config_mock.assert_called_once_with(
         mock.ANY,
         {

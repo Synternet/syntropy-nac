@@ -5,6 +5,7 @@ from unittest import mock
 import pytest
 import syntropy_sdk as sdk
 from click.testing import CliRunner
+from syntropy_sdk import models
 
 
 @pytest.fixture
@@ -64,33 +65,55 @@ def api_agents_get(
 
 @pytest.fixture
 def with_pagination():
+    def wrapper(a):
+        def f(*args, **kwargs):
+            res = a(*args, **kwargs)
+            return res.to_dict()
+
+        return f
+
     with mock.patch.object(
         sdk.utils,
         "WithPagination",
         autospec=True,
-        side_effect=lambda x: x,
+        side_effect=wrapper,
     ) as api:
         yield api
 
 
 @pytest.fixture
 def with_batched():
+    def wrapper(a):
+        def f(*args, **kwargs):
+            res = a(*args, **kwargs)
+            return res.to_dict()
+
+        return f
+
     with mock.patch.object(
         sdk.utils,
         "BatchedRequest",
         autospec=True,
-        side_effect=lambda x: x,
+        side_effect=wrapper,
     ) as api:
         yield api
 
 
 @pytest.fixture
 def with_batched_filter():
+    def wrapper(a, b):
+        def f(filter=None, **kwargs):
+            filter = ",".join(str(i) for i in filter)
+            res = a(filter=filter, **kwargs)
+            return res
+
+        return f
+
     with mock.patch.object(
         sdk.utils,
         "BatchedRequestFilter",
         autospec=True,
-        side_effect=lambda x, _: x,
+        side_effect=wrapper,
     ) as api:
         yield api
 
@@ -103,13 +126,15 @@ def api_connections(
         sdk.ConnectionsApi,
         "v1_network_connections_get",
         autospec=True,
-        return_value={"data": p2p_connections},
+        return_value=models.V1NetworkConnectionsGetResponse(data=p2p_connections),
     ) as api:
         with mock.patch.object(
             sdk.ConnectionsApi,
             "v1_network_connections_search",
             autospec=True,
-            return_value={"data": p2p_connections},
+            return_value=models.V1NetworkConnectionsSearchResponse(
+                data=p2p_connections
+            ),
         ) as api:
             with mock.patch.object(
                 sdk.ConnectionsApi,
@@ -132,13 +157,17 @@ def api_connections_services(
         sdk.ConnectionsApi,
         "v1_network_connections_get",
         autospec=True,
-        return_value={"data": p2p_connection_services},
+        return_value=models.V1NetworkConnectionsGetResponse(
+            data=p2p_connection_services
+        ),
     ):
         with mock.patch.object(
             sdk.ConnectionsApi,
             "v1_network_connections_search",
             autospec=True,
-            return_value={"data": p2p_connection_services},
+            return_value=models.V1NetworkConnectionsSearchResponse(
+                data=p2p_connection_services
+            ),
         ):
             with mock.patch.object(
                 sdk.ConnectionsApi,
@@ -159,10 +188,10 @@ def api_services(connection_services_stub):
         return {
             "data": [
                 {
-                    "agent_id": id,
+                    "agent_id": int(id),
                     "agent_service_name": service,
                 }
-                for id in filter
+                for id in filter.split(",")
                 for service in ("nginx", "redis")
             ]
         }
@@ -222,7 +251,7 @@ connections:
 
 @pytest.fixture
 def all_agents(platform_agent_get_stub):
-    return {agent["agent_id"]: agent for agent in platform_agent_get_stub()["data"]}
+    return {agent["agent_id"]: agent for agent in platform_agent_get_stub().data}
 
 
 @pytest.fixture
@@ -654,8 +683,8 @@ def platform_agent_index_ex():
 @pytest.fixture
 def platform_agent_get_stub():
     def func(*args, **kwargs):
-        return {
-            "data": [
+        return models.V1NetworkAgentsGetResponse(
+            data=[
                 {
                     "agent_name": f"auto gen {i}",
                     "agent_id": i,
@@ -663,7 +692,7 @@ def platform_agent_get_stub():
                 }
                 for i in range(256)
             ]
-        }
+        )
 
     return func
 
@@ -695,17 +724,16 @@ def connection_services_stub(
     connection_services, agent_connection_subnets_1, agent_connection_subnets_2
 ):
     def func(_, filter=None, _preload_content=None):
-        print(filter)
         return {
             "data": [
                 {
                     **connection_services,
-                    "agent_connection_group_id": id,
+                    "agent_connection_group_id": int(id),
                     "agent_connection_subnets": agent_connection_subnets_2
                     if int(id) % 2
                     else agent_connection_subnets_1,
                 }
-                for id in filter
+                for id in filter.split(",")
             ]
         }
 

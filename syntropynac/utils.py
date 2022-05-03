@@ -10,12 +10,15 @@ from syntropynac.fields import ConfigFields, PeerState, PeerType, Topology
 
 def get_agents_connections(api, agents):
     ids = list(agents.keys())
-    connections = sdk.ConnectionsApi(api).v1_network_connections_search(
-        body=models.V1NetworkConnectionsSearchRequest(
-            filter=models.V1ConnectionFilter(agent_id=id),
-        ),
-        _preload_content=False,
-    )["data"]
+    connections = (
+        sdk.ConnectionsApi(api)
+        .v1_network_connections_search(
+            body=models.V1NetworkConnectionsSearchRequest(
+                filter=models.V1ConnectionFilter(agent_id=ids),
+            ),
+        )
+        .to_dict()["data"]
+    )
     return connections
 
 
@@ -69,8 +72,13 @@ def export_connections(api, all_agents, network, net_agents, connections, topolo
         )(filter=unused_endpoints, _preload_content=False)["data"]
 
         agent_services = defaultdict(list)
-        for agent in agents_services:
-            agent_services[agent["agent_id"]].append(agent)
+        for agent_id, agent in zip(unused_endpoints, agents_services):
+            id = (
+                agent["agent_id"]
+                if "agent_id" in agent and agent["agent_id"]
+                else agent_id
+            )
+            agent_services[id].append(agent)
 
         network[fields.ConfigFields.ENDPOINTS] = {
             all_agents[id]["agent_name"]: {

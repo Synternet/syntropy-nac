@@ -147,7 +147,9 @@ def connections_stub():
 
 def test_create_connections(api_connections, with_pagination, created_connections):
     sdk.ConnectionsApi.v1_network_connections_get.side_effect = (
-        lambda *args, **kwargs: {"data": created_connections}
+        lambda *args, **kwargs: models.V1NetworkConnectionsGetResponse(
+            data=created_connections
+        )
     )
 
     result = configure.create_connections(
