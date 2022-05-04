@@ -39,21 +39,20 @@ def create_connections(api, peers, silent=False):
 
 
 def delete_connections(api, absent):
-    connections = utils.WithPagination(
-        sdk.ConnectionsApi(api).v1_network_connections_search
-    )(
-        body=models.V1NetworkConnectionsSearchRequest(
-            filter=models.V1ConnectionFilter(
-                agent_pair=[
-                    models.V1AgentPairFilter(agent_1_id=a, agent_2_id=b)
-                    for a, b in absent
-                ]
-            )
-        ),
-        _preload_content=False,
-    )[
-        "data"
-    ]
+    connections = (
+        sdk.ConnectionsApi(api)
+        .v1_network_connections_search(
+            body=models.V1NetworkConnectionsSearchRequest(
+                filter=models.V1ConnectionFilter(
+                    agent_pair=[
+                        models.V1AgentPairFilter(agent_1_id=a, agent_2_id=b)
+                        for a, b in absent
+                    ]
+                )
+            ),
+        )
+        .to_dict()["data"]
+    )
 
     sdk.ConnectionsApi(api).v1_network_connections_remove(
         body=models.V1NetworkConnectionsRemoveRequest(

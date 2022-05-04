@@ -703,18 +703,20 @@ def platform_agent_search_stub():
         if body.filter.agent_name:
             for i in range(30):
                 if f"agent{i}" in body.filter.agent_name:
-                    return {"data": [{"agent_name": f"agent{i}", "agent_id": i}]}
+                    return models.V1NetworkConnectionsSearchResponse(
+                        [{"agent_name": f"agent{i}", "agent_id": i}]
+                    )
         elif body.filter.agent_tag_name:
-            return {
-                "data": [
+            return models.V1NetworkConnectionsSearchResponse(
+                [
                     {
                         "agent_name": f"filter - {body.filter.agent_tag_name[0]} {i}",
                         "agent_id": 10 * len(body.filter.agent_tag_name[0]) + i,
                     }
                     for i in range(3)
                 ]
-            }
-        return {"data": []}
+            )
+        return models.V1NetworkConnectionsSearchResponse([])
 
     return func
 

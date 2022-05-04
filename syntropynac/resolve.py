@@ -57,12 +57,15 @@ class ConnectionServices:
 
 @functools.lru_cache(maxsize=None)
 def resolve_agent_by_name(api, name, silent=False):
-    agents = sdk.AgentsApi(api).v1_network_agents_search(
-        models.V1NetworkAgentsSearchRequest(
-            filter=models.V1AgentFilter(agent_name=name),
-        ),
-        _preload_content=False,
-    )["data"]
+    agents = (
+        sdk.AgentsApi(api)
+        .v1_network_agents_search(
+            models.V1NetworkAgentsSearchRequest(
+                filter=models.V1AgentFilter(agent_name=name),
+            ),
+        )
+        .to_dict()["data"]
+    )
 
     return [agent["agent_id"] for agent in agents]
 
@@ -374,12 +377,15 @@ def expand_agents_tags(api, dst_dict, silent=False):
         if dst.get(ConfigFields.PEER_TYPE) != PeerType.TAG:
             continue
 
-        agents = sdk.AgentsApi(api).v1_network_agents_search(
-            models.V1NetworkAgentsSearchRequest(
-                filter=models.V1AgentFilter(agent_tag_name=[name]),
-            ),
-            _preload_content=False,
-        )["data"]
+        agents = (
+            sdk.AgentsApi(api)
+            .v1_network_agents_search(
+                models.V1NetworkAgentsSearchRequest(
+                    filter=models.V1AgentFilter(agent_tag_name=[name]),
+                ),
+            )
+            .to_dict()["data"]
+        )
 
         if not agents:
             error = f"Could not find endpoints by the tag {name}"
